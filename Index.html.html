@@ -927,11 +927,11 @@
   function drawTrend(trendSeries){
     const data=google.visualization.arrayToDataTable(trendSeries,false);
     const options={
-      legend:{position:"bottom"},
+      legend:{position:"none"},
       chartArea:{left:60,top:20,right:20,bottom:60},
       hAxis:{title:"SEMANA",slantedText:false,textStyle:{fontSize:10}},
-      vAxis:{title:"Factor de rendimiento",format:"0.00",viewWindow:{min:0}},
-      colors:["#2563eb","#f97316"],
+      vAxis:{title:"HH por 1% de avance",format:"0.0",viewWindow:{min:0}},
+      colors:["#f97316"],
       lineWidth:2.5,
       pointSize:4,
     };
@@ -1036,7 +1036,7 @@
       const titleEl = trendPanel.querySelector(".panel-title");
       const subEl = trendPanel.querySelector(".panel-sub");
       if(titleEl) titleEl.textContent = "Rendimiento ultimas 6 semanas";
-      if(subEl) subEl.textContent = "Factor semanal: HH reales / HH teoricas del avance ejecutado. < 1 mejora, > 1 empeora.";
+      if(subEl) subEl.textContent = "HH invertidas por cada 1% de avance físico global.";
     }
 
     document.getElementById("meta").textContent=`Generado: ${res.meta.generatedAtISO}`;

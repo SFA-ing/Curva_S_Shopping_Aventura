@@ -252,9 +252,8 @@ function getDashboardData() {
     };
 
     rendimientoSemanalMap[wk] = {
-      factorPlan : 1,
-      factorReal : (inReal && earnedHHRealWeek > 0 && hhRealWeek != null)
-        ? (hhRealWeek / earnedHHRealWeek)
+      hhPor1Pct: (inReal && earnedHHRealWeek > 0 && hhRealWeek != null && hhRealWeek > 0)
+        ? hhRealWeek / (earnedHHRealWeek / hhPlanTotal * 100)
         : null
     };
   }
@@ -301,10 +300,10 @@ function getDashboardData() {
   }
 
   const last6       = ultimasNSemanasHasta_(weeks, cutMonday, 6);
-  const trendSeries = [["WEEK_KEY", "Plan", "Rend Real Semanal"]];
+  const trendSeries = [["WEEK_KEY", "HH por 1% avance"]];
   for (const wk of last6) {
     const v = rendimientoSemanalMap[wk] || {};
-    trendSeries.push([wk, v.factorPlan, v.factorReal]);
+    trendSeries.push([wk, v.hhPor1Pct ?? null]);
   }
 
   // ----------------------------------------------------------
