@@ -29,6 +29,12 @@ var CACHE_SHEET_NAME = 'data';
 var DASHBOARD_KEY = 'aventura_shopping';
 var REPORTE_FISICO_URL = 'https://script.google.com/a/macros/ingener.com/s/AKfycbxK8UUzaeZ4H3ke1_ZzKRXzyzkm88a5-MkZkRmVqkgAOJyJvEkVQhl2Lj-caDdPI3tQ5A/exec';
 
+function actualizarManualmente() {
+  ETL_actualizarTodo();
+  exportarParaDashboard();
+  return 'Actualización manual completada: ' + new Date().toLocaleString();
+}
+
 function exportarParaDashboard() {
   var data = getDashboardData();
   var json = JSON.stringify(data);

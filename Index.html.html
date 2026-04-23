@@ -77,6 +77,13 @@
     }
     .btn:hover{ background: var(--soft); }
     .btn:disabled{ opacity:.5; cursor:not-allowed; }
+    .btn-primary{
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+    .btn-primary:hover{ background: #1d4ed8; }
+    .btn-primary:disabled{ opacity:.5; cursor:not-allowed; }
 
     /* ── LAYOUT ── */
     .grid{
@@ -409,6 +416,7 @@
     <div class="topbar-logo">M</div>
     <h1>Shopping Aventura — Reporte Avance Físico</h1>
     <div class="topbar-meta" id="meta"></div>
+    <button class="btn btn-primary" id="btnImport" onclick="importarDatos()">Importar datos</button>
     <button class="btn" id="btnRefresh" onclick="load()">Actualizar</button>
   </div>
 
@@ -1064,6 +1072,39 @@
     wireActivitySelection();
     clearActivityFilter();
     renderTaskTableFiltered();
+  }
+
+  function importarDatos(){
+    const btnI = document.getElementById("btnImport");
+    const btnR = document.getElementById("btnRefresh");
+    btnI.disabled = true;
+    btnR.disabled = true;
+    btnI.textContent = "Importando…";
+    document.getElementById("meta").textContent = "Importando datos desde Excel…";
+
+    if(typeof google !== "undefined" && google.script && google.script.run){
+      google.script.run
+        .withSuccessHandler(()=>{
+          btnI.textContent = "Importar datos";
+          btnI.disabled = false;
+          load();
+        })
+        .withFailureHandler(err=>{
+          btnI.textContent = "Importar datos";
+          btnI.disabled = false;
+          btnR.disabled = false;
+          document.getElementById("meta").textContent = "Error al importar";
+          alert(err.message || err);
+        })
+        .actualizarManualmente();
+    } else {
+      setTimeout(()=>{
+        btnI.textContent = "Importar datos";
+        btnI.disabled = false;
+        btnR.disabled = false;
+        document.getElementById("meta").textContent = "Modo preview — importación simulada";
+      }, 1200);
+    }
   }
 
   function load(){
