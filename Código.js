@@ -288,9 +288,14 @@ function getDashboardData() {
   const hhPendRend    = calcularHHRestantesPorRendActual_(taskMeta, byTaskCut);
   const diffPend      = hhPendRend - hhPendTeorico;
 
-  // HH por 1%
+  const last6       = ultimasNSemanasHasta_(weeks, cutMonday, 6);
+
+  // HH por 1% — usa la última semana real para que coincida con el último punto del gráfico
   const hhPor1PctTeor = hhPlanTotal / 100;
-  const hhPor1PctReal = (pctRealCut > 0) ? (hhRealCut / (pctRealCut * 100)) : null;
+  const lastRealWk    = last6.length > 0 ? last6[last6.length - 1] : null;
+  const hhPor1PctReal = (lastRealWk && rendimientoSemanalMap[lastRealWk]?.hhPor1Pct != null)
+    ? rendimientoSemanalMap[lastRealWk].hhPor1Pct
+    : (pctRealCut > 0 ? Math.round(hhRealCut / (pctRealCut * 100)) : null);
 
   // Series para charts
   const curveSeries = [["WEEK_KEY", "HH Plan Acum", "HH Real Acum", "% Físico Plan", "% Físico Real"]];
@@ -299,7 +304,6 @@ function getDashboardData() {
     curveSeries.push([wk, v.hhPlanAc, v.hhRealAc, v.pctPlan, v.pctReal]);
   }
 
-  const last6       = ultimasNSemanasHasta_(weeks, cutMonday, 6);
   const trendSeries = [["WEEK_KEY", "HH por 1% avance"]];
   for (const wk of last6) {
     const v = rendimientoSemanalMap[wk] || {};
