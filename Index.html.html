@@ -337,6 +337,19 @@
     #actTable tbody tr.selected{ background:var(--sel); }
     #taskTable tbody tr.delay{ background:var(--bad-bg); }
 
+    /* Tabla rendimientos cruzados */
+    #rendCruzTable th.group-real    { background:#fef3c7; color:#92400e; text-align:center; }
+    #rendCruzTable th.group-teo     { background:#dbeafe; color:#1e40af; text-align:center; }
+    #rendCruzTable th.sub           { font-weight:600; font-size:11px; text-align:center; background:var(--soft); }
+    #rendCruzTable td.rend-cell     { text-align:center; font-family:'DM Mono',monospace; font-size:12px; }
+    #rendCruzTable td.rend-null     { background:#e2e8f0; }
+    #rendCruzTable td.rend-bad      { background:#fee2e2; color:var(--red); font-weight:700; }
+    #rendCruzTable td.rend-good     { color:var(--green); }
+    #rendCruzTable td.rend-teo      { text-align:center; font-size:12px; color:#475569; }
+    #rendCruzTable td.teo-null      { background:#e2e8f0; }
+    #rendCruzTable th:first-child,
+    #rendCruzTable td:first-child   { font-weight:600; min-width:180px; }
+
     .headerRow{
       display:flex; align-items:flex-end;
       justify-content:space-between;
@@ -557,6 +570,14 @@
         <div class="panel-sub">Incluye ΔHH y Δ% (pp). Se resalta si Δ% (pp) &lt; 0.</div>
         <div class="tableWrap wrapTask">
           <table id="taskTable"></table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Rendimientos por tarea y sector</div>
+        <div class="panel-sub">HH/unidad real vs teórico por etapa. Naranja = peor que el plan.</div>
+        <div class="tableWrap" style="overflow-x:auto;">
+          <table id="rendCruzTable"></table>
         </div>
       </div>
     </div>
@@ -1109,6 +1130,48 @@
     wireActivitySelection();
     clearActivityFilter();
     renderTaskTableFiltered();
+    renderRendimientosCruzados(res.rendimientosCruzados);
+  }
+
+  function renderRendimientosCruzados(data){
+    const el = document.getElementById("rendCruzTable");
+    if(!data || !data.rows || !data.stages){ el.innerHTML=''; return; }
+    const stages = data.stages;
+    const n = stages.length;
+    const labels = stages.map(s => s.label || s.key);
+
+    // Cabecera fila 1
+    let thead = `<tr>
+      <th rowspan="2" style="vertical-align:bottom;">Tarea</th>
+      <th colspan="${n}" class="group-real">Rendimientos reales (HH/u)</th>
+      <th colspan="${n}" class="group-teo">Rendimientos teóricos (HH/u)</th>
+    </tr>`;
+    // Cabecera fila 2
+    thead += `<tr>${labels.map(l=>`<th class="sub">${l}</th>`).join('')}${labels.map(l=>`<th class="sub">${l}</th>`).join('')}</tr>`;
+
+    let tbody = '';
+    for(const row of data.rows){
+      let tds = '';
+      // Celdas real
+      for(const s of stages){
+        const v = row.real[s.key];
+        const t = row.teorico[s.key];
+        if(v == null){ tds += `<td class="rend-cell rend-null"></td>`; continue; }
+        const bad = (t != null && v > t * 1.05);
+        const good = (t != null && v <= t);
+        const cls = bad ? 'rend-bad' : good ? 'rend-good' : '';
+        tds += `<td class="rend-cell ${cls}">${fmtNumber(v,2)}</td>`;
+      }
+      // Celdas teórico
+      for(const s of stages){
+        const v = row.teorico[s.key];
+        if(v == null){ tds += `<td class="rend-teo teo-null"></td>`; continue; }
+        tds += `<td class="rend-teo">${fmtNumber(v,2)}</td>`;
+      }
+      tbody += `<tr><td>${row.nombre}</td>${tds}</tr>`;
+    }
+
+    el.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
   }
 
   function importarDatos(){

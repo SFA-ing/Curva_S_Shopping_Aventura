@@ -365,7 +365,8 @@ function getDashboardData() {
   proyecciones,
   stageSummary,
   activitySummary,
-  taskTable
+  taskTable,
+  rendimientosCruzados: construirTablaRendimientosCruzados_(taskMeta, byTaskCut)
   };
 }
 
@@ -580,15 +581,17 @@ function construirTaskMeta_(shPlan) {
     if (!map[key]) {
       map[key] = {
         etapa    : eta,
+        etapaOrig: String(v[r][iEta] || "").trim(),
         actividad: act,
         tarea    : tar,
+        tareaOrig: String(v[r][iTar] || "").trim(),
         unidad,
         qtyPlan,
         hhPlan,
         rendPlan : (qtyPlan > 0) ? (hhPlan / qtyPlan) : null
       };
     } else {
-      if (!map[key].etapa && eta) map[key].etapa = eta;
+      if (!map[key].etapa && eta) { map[key].etapa = eta; map[key].etapaOrig = String(v[r][iEta] || "").trim(); }
       map[key].qtyPlan = Math.max(map[key].qtyPlan || 0, qtyPlan || 0);
       map[key].hhPlan  = Math.max(map[key].hhPlan  || 0, hhPlan  || 0);
       map[key].rendPlan = (map[key].qtyPlan > 0) ? (map[key].hhPlan / map[key].qtyPlan) : null;
@@ -596,6 +599,74 @@ function construirTaskMeta_(shPlan) {
     }
   }
   return map;
+}
+
+// ============================================================
+//  TABLA CRUZADA: Rendimientos por Tarea × Etapa
+// ============================================================
+function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
+  // Recopilar etapas únicas con sus etiquetas originales
+  const etapaMap = {}; // normalized -> original label
+  for (const m of Object.values(taskMeta)) {
+    if (m.etapa && !etapaMap[m.etapa]) {
+      etapaMap[m.etapa] = m.etapaOrig || m.etapa;
+    }
+  }
+  const stages = Object.keys(etapaMap).sort();
+
+  // Keyword de cada etapa (lo que va después del "eN - ")
+  const kwMap = {};
+  for (const etapa of stages) {
+    kwMap[etapa] = etapa.replace(/^e\d+\s*[-–]\s*/i, '').trim();
+  }
+
+  // Agrupar por nombre base de tarea (stripped del keyword de etapa)
+  const aggMap = {}; // baseNorm -> { _orig, _origBase, [etapa]: { hhPlan, qtyPlan, hhReal, qtyReal } }
+  for (const [k, m] of Object.entries(taskMeta)) {
+    let baseNorm = m.tarea;
+    let baseOrig = m.tareaOrig || m.tarea;
+
+    for (const etapa of stages) {
+      const kw = kwMap[etapa];
+      if (kw && baseNorm.endsWith(' ' + kw)) {
+        baseNorm = baseNorm.slice(0, baseNorm.length - kw.length - 1).trim();
+        baseOrig = baseOrig.replace(new RegExp('\\s+' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'), '').trim();
+        break;
+      }
+    }
+
+    if (!aggMap[baseNorm]) aggMap[baseNorm] = { _orig: baseOrig };
+    const agg = aggMap[baseNorm];
+    if (!agg[m.etapa]) agg[m.etapa] = { hhPlan: 0, qtyPlan: 0, hhReal: 0, qtyReal: 0 };
+    agg[m.etapa].hhPlan  += m.hhPlan  || 0;
+    agg[m.etapa].qtyPlan += m.qtyPlan || 0;
+    const cut = byTaskCut[k] || {};
+    agg[m.etapa].hhReal  += cut.hhReal  || 0;
+    agg[m.etapa].qtyReal += cut.qtyReal || 0;
+  }
+
+  // Construir filas
+  const rows = [];
+  for (const [, data] of Object.entries(aggMap)) {
+    const real    = {};
+    const teorico = {};
+    let hasAnyData = false;
+    for (const etapa of stages) {
+      const agg = data[etapa];
+      if (!agg || !(agg.qtyPlan > 0)) { real[etapa] = null; teorico[etapa] = null; continue; }
+      hasAnyData = true;
+      teorico[etapa] = agg.hhPlan  > 0 ? agg.hhPlan  / agg.qtyPlan : null;
+      real[etapa]    = agg.qtyReal > 0 ? agg.hhReal  / agg.qtyReal : null;
+    }
+    if (hasAnyData) rows.push({ nombre: data._orig, real, teorico });
+  }
+
+  rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+
+  return {
+    stages: stages.map(e => ({ key: e, label: etapaMap[e] })),
+    rows
+  };
 }
 
 function construirDenominadores_(taskMeta) {
