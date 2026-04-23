@@ -915,9 +915,14 @@
       colors
     };
 
-    // Formatear columnas % para que el tooltip muestre "100.0%" en lugar de "1.0"
+    // Formato entero para barras HH (tooltip sin decimales)
+    const hhFmt  = new google.visualization.NumberFormat({pattern: '#,##0'});
+    const hhCols = !showProy ? [1, 2] : [1, 2, 3];
+    hhCols.forEach(c => hhFmt.format(dt, c));
+
+    // Formato % para líneas de avance físico
     const pctFmt = new google.visualization.NumberFormat({pattern: '#,##0.0%'});
-    const pctCols = !showProy ? [2, 3] : [3, 4, 5];
+    const pctCols = !showProy ? [3, 4] : [4, 5, 6];
     pctCols.forEach(c => pctFmt.format(dt, c));
 
     new google.visualization.ComboChart(document.getElementById("curveChart")).draw(dt, options);
