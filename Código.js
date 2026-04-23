@@ -605,38 +605,75 @@ function construirTaskMeta_(shPlan) {
 //  TABLA CRUZADA: Rendimientos por Tarea × Etapa
 // ============================================================
 function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
-  // Recopilar etapas únicas con sus etiquetas originales
-  const etapaMap = {}; // normalized -> original label
+  // Recopilar etapas únicas
+  const etapaMap = {};
   for (const m of Object.values(taskMeta)) {
-    if (m.etapa && !etapaMap[m.etapa]) {
-      etapaMap[m.etapa] = m.etapaOrig || m.etapa;
-    }
+    if (m.etapa && !etapaMap[m.etapa]) etapaMap[m.etapa] = m.etapaOrig || m.etapa;
   }
   const stages = Object.keys(etapaMap).sort();
 
-  // Keyword de cada etapa (lo que va después del "eN - ")
-  const kwMap = {};
+  // Keywords de cada etapa (texto después de "eN - ") + variante sin "de"
+  const kwPhrases = [];
   for (const etapa of stages) {
-    kwMap[etapa] = etapa.replace(/^e\d+\s*[-–]\s*/i, '').trim();
+    const kw = etapa.replace(/^e\d+\s*[-–]\s*/i, '').trim();
+    if (kw) {
+      kwPhrases.push(kw);
+      const kwNoDe = kw.replace(/\bde\b/g, '').replace(/\s+/g, ' ').trim();
+      if (kwNoDe !== kw) kwPhrases.push(kwNoDe);
+    }
   }
 
-  // Agrupar por nombre base de tarea (stripped del keyword de etapa)
-  const aggMap = {}; // baseNorm -> { _orig, _origBase, [etapa]: { hhPlan, qtyPlan, hhReal, qtyReal } }
-  for (const [k, m] of Object.entries(taskMeta)) {
-    let baseNorm = m.tarea;
-    let baseOrig = m.tareaOrig || m.tarea;
+  // Palabras individuales de los keywords (para strip de palabras sueltas al final)
+  const kwWordSet = new Set();
+  for (const kw of kwPhrases) kw.split(/\s+/).forEach(w => w.length > 2 && kwWordSet.add(w));
 
-    for (const etapa of stages) {
-      const kw = kwMap[etapa];
-      if (kw && baseNorm.endsWith(' ' + kw)) {
-        baseNorm = baseNorm.slice(0, baseNorm.length - kw.length - 1).trim();
-        baseOrig = baseOrig.replace(new RegExp('\\s+' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*$', 'i'), '').trim();
-        break;
+  function escR_(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function strippedBase_(tarea) {
+    let s = tarea;
+
+    // 1. Strip cada keyword phrase + TODO lo que venga después (incluye "– PEAD", etc.)
+    for (const kw of kwPhrases) {
+      s = s.replace(new RegExp('\\s*[-–]?\\s*' + escR_(kw) + '(\\s.*)?$', 'i'), '').trim();
+    }
+
+    // 2. Strip separador con texto restante (ej: " – PEAD")
+    s = s.replace(/\s*[-–]+.*$/, '').trim();
+
+    // 3. Strip palabras finales sueltas que sean keywords de zona (ej: "Pasarela", "Bombas")
+    let changed = true;
+    while (changed) {
+      changed = false;
+      const parts = s.split(/\s+/);
+      if (parts.length > 2) {
+        const last = parts[parts.length - 1].toLowerCase();
+        if (kwWordSet.has(last)) { s = parts.slice(0, -1).join(' ').trim(); changed = true; }
       }
     }
 
-    if (!aggMap[baseNorm]) aggMap[baseNorm] = { _orig: baseOrig };
-    const agg = aggMap[baseNorm];
+    return s;
+  }
+
+  // Clave de agrupación: normalizar plural (colectores → colector, espinas → espina)
+  function groupKey_(base) {
+    return base.toLowerCase()
+      .replace(/ores\b/g, 'or')   // colectores → colector
+      .replace(/ines\b/g, 'in')   // espines → espin (si aplica)
+      .replace(/([^aeiou])es\b/g, '$1') // consonante + es → quita "es"
+      .trim();
+  }
+
+  // Agrupar: groupKey -> { _orig, [etapa]: agg }
+  const groupMap  = {}; // groupKey -> aggMap entry
+  const groupOrig = {}; // groupKey -> display name (primer nombre visto)
+
+  for (const [k, m] of Object.entries(taskMeta)) {
+    const baseNorm = strippedBase_(m.tarea);
+    const baseOrig = strippedBase_(m.tareaOrig || m.tarea) || (m.tareaOrig || m.tarea);
+    const gk       = groupKey_(baseNorm);
+
+    if (!groupMap[gk]) { groupMap[gk] = {}; groupOrig[gk] = baseOrig; }
+    const agg = groupMap[gk];
     if (!agg[m.etapa]) agg[m.etapa] = { hhPlan: 0, qtyPlan: 0, hhReal: 0, qtyReal: 0 };
     agg[m.etapa].hhPlan  += m.hhPlan  || 0;
     agg[m.etapa].qtyPlan += m.qtyPlan || 0;
@@ -647,18 +684,17 @@ function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
 
   // Construir filas
   const rows = [];
-  for (const [, data] of Object.entries(aggMap)) {
-    const real    = {};
-    const teorico = {};
+  for (const [gk, agg] of Object.entries(groupMap)) {
+    const real = {}, teorico = {};
     let hasAnyData = false;
     for (const etapa of stages) {
-      const agg = data[etapa];
-      if (!agg || !(agg.qtyPlan > 0)) { real[etapa] = null; teorico[etapa] = null; continue; }
+      const a = agg[etapa];
+      if (!a || !(a.qtyPlan > 0)) { real[etapa] = null; teorico[etapa] = null; continue; }
       hasAnyData = true;
-      teorico[etapa] = agg.hhPlan  > 0 ? agg.hhPlan  / agg.qtyPlan : null;
-      real[etapa]    = agg.qtyReal > 0 ? agg.hhReal  / agg.qtyReal : null;
+      teorico[etapa] = a.hhPlan  > 0 ? a.hhPlan  / a.qtyPlan : null;
+      real[etapa]    = a.qtyReal > 0 ? a.hhReal  / a.qtyReal : null;
     }
-    if (hasAnyData) rows.push({ nombre: data._orig, real, teorico });
+    if (hasAnyData) rows.push({ nombre: groupOrig[gk], real, teorico });
   }
 
   rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
