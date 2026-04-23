@@ -640,11 +640,15 @@ function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
     return s;
   }
 
-  // Clave de agrupación: nombre stripped + normalización de plural
+  // Clave de agrupación: normaliza artículos y plurales
   function groupKey_(base) {
     return base.toLowerCase()
-      .replace(/ores\b/g, 'or')          // colectores → colector
-      .replace(/([^aeiou\s])es\b/g, '$1') // espinas → espina, colectores ya cubierto
+      .replace(/\bde\b\s*/g, '')          // "montaje de bies" → "montaje bies"
+      .replace(/\blos\b\s*/g, '')
+      .replace(/\blas\b\s*/g, '')
+      .replace(/\s+/g, ' ')
+      .replace(/ores\b/g, 'or')           // colectores → colector
+      .replace(/([^aeiou\s])es\b/g, '$1') // espinas → espina
       .trim();
   }
 
