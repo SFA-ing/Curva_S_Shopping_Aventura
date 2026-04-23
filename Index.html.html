@@ -865,6 +865,11 @@
       colors
     };
 
+    // Formatear columnas % para que el tooltip muestre "100.0%" en lugar de "1.0"
+    const pctFmt = new google.visualization.NumberFormat({pattern: '#,##0.0%'});
+    const pctCols = !showProy ? [2, 3] : [3, 4, 5];
+    pctCols.forEach(c => pctFmt.format(dt, c));
+
     new google.visualization.ComboChart(document.getElementById("curveChart")).draw(dt, options);
 
     // Actualizar info box del escenario

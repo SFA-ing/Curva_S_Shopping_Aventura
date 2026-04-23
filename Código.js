@@ -241,7 +241,7 @@ function getDashboardData() {
       }
     }
 
-    const pctPlan = earnedHHPlan / denom.globalHH;
+    const pctPlan = Math.min(1, earnedHHPlan / denom.globalHH);
     const pctReal = earnedHHReal / denom.globalHH;
 
     curveMap[wk] = {
