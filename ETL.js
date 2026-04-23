@@ -626,6 +626,43 @@ function hhTotFix_(x) {
 }
 
 /***************
+ * TRIGGERS
+ ***************/
+function crearTriggerETLNocturno() {
+  borrarTriggerETLNocturno();
+
+  ScriptApp.newTrigger('ETL_actualizarTodo')
+    .timeBased()
+    .atHour(23)
+    .everyDays(1)
+    .create();
+
+  return 'Trigger nocturno ETL creado: corre todos los días alrededor de las 23:00.';
+}
+
+function borrarTriggerETLNocturno() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'ETL_actualizarTodo') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  return 'Trigger ETL eliminado.';
+}
+
+function verTriggerETLNocturno() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var out = [];
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'ETL_actualizarTodo') {
+      out.push(triggers[i].getHandlerFunction() + ' | ' + triggers[i].getEventType());
+    }
+  }
+  Logger.log(out.length ? out.join('\n') : 'No hay trigger ETL configurado.');
+  return out;
+}
+
+/***************
  * LOG
  ***************/
 const ETL_LOG_SHEET = "ETL_LOG";

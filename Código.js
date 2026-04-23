@@ -112,9 +112,15 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Dashboard')
     .addItem('Exportar ahora', 'exportarParaDashboard')
-    .addItem('Crear trigger nocturno 00:00', 'crearTriggerExportacionNocturna')
-    .addItem('Ver triggers', 'verTriggersExportacionNocturna')
-    .addItem('Borrar triggers', 'borrarTriggersExportacionNocturna')
+    .addSeparator()
+    .addItem('ETL: correr ahora', 'ETL_actualizarTodo')
+    .addItem('ETL: crear trigger nocturno 23:00', 'crearTriggerETLNocturno')
+    .addItem('ETL: ver trigger', 'verTriggerETLNocturno')
+    .addItem('ETL: borrar trigger', 'borrarTriggerETLNocturno')
+    .addSeparator()
+    .addItem('Exportación: crear trigger nocturno 00:00', 'crearTriggerExportacionNocturna')
+    .addItem('Exportación: ver triggers', 'verTriggersExportacionNocturna')
+    .addItem('Exportación: borrar triggers', 'borrarTriggersExportacionNocturna')
     .addToUi();
 }
 
