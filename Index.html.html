@@ -1054,7 +1054,7 @@
     FULL_TASK_TABLE=res.taskTable;
     FULL_ACT_TABLE=sortByHHRealDesc(res.activitySummary);
 
-    const stageSummary = res.stageSummary || [["ETAPA","HH Plan (corte)","HH Real (corte)","Δ HH","% Fisico Plan","% Fisico Real","Δ % (pp)"]];
+    const stageSummary = res.stageSummary || [["ETAPA","HH Plan (corte)","HH Real (corte)","Δ HH","% Fisico Plan","% Fisico Real","Δ % (pp)","m (corte / total)"]];
     renderTable("stageTable", sortByHHRealDesc(stageSummary), [
       x=>x,
       x=>fmtNumber(x,2),
@@ -1063,6 +1063,7 @@
       x=>fmtPct(x,2),
       x=>fmtPct(x,2),
       x=>{const n=Number(x),c=n<0?"c-neg":n>0?"c-pos":"c-neu"; return `<span class="${c}">${fmtPct(n,2)}</span>`;},
+      x=>{ if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} m / ${fmtNumber(x.t,0)} m`; },
     ]);
 
     renderTable("actTable", FULL_ACT_TABLE, [
