@@ -273,7 +273,19 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
 // cantidad planificada para derivar las HH de esa misma semana.
 function transformPlanificacionLB_(shPlanLB, weekMap) {
   const v = shPlanLB.getDataRange().getValues();
-  const h = v[0].map(String);
+
+  // Auto-detectar fila de headers: buscar en las primeras 5 filas
+  // la que contenga ETAPA + ACTIVIDAD + TAREA
+  let headerRowIdx = 0;
+  for (let r = 0; r < Math.min(5, v.length); r++) {
+    const row = v[r].map(String);
+    if (row.indexOf("ETAPA") !== -1 && row.indexOf("ACTIVIDAD") !== -1 && row.indexOf("TAREA") !== -1) {
+      headerRowIdx = r;
+      break;
+    }
+  }
+
+  const h = v[headerRowIdx].map(String);
 
   const iPersonal = h.indexOf("Personal");
   const iEtapa    = h.indexOf("ETAPA");
@@ -285,7 +297,7 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
   const iHHTot    = h.indexOf("HH TOTALES");
 
   if ([iPersonal, iEtapa, iAct, iTar, iQty, iUni, iRend, iHHTot].some(x => x === -1)) {
-    throw new Error('En "PLANIFICACION LB" faltan columnas base (Personal/ETAPA/ACTIVIDAD/TAREA/Cantidad Teorica/Unidad/Rendimiento Teorico/HH TOTALES).');
+    throw new Error('En "PLANIFICACION LB" faltan columnas base (Personal/ETAPA/ACTIVIDAD/TAREA/Cantidad Teorica/Unidad/Rendimiento Teorico/HH TOTALES). Header detectado en fila ' + (headerRowIdx + 1) + '.');
   }
 
   const out = [[
@@ -297,7 +309,7 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
 
   const weekCols = [];
   for (let c = 0; c < h.length; c++) {
-    const wkKey = weekKeyFromHeader_(v[0][c], weekMap);
+    const wkKey = weekKeyFromHeader_(v[headerRowIdx][c], weekMap);
     if (wkKey) weekCols.push({ col: c, wkKey: wkKey });
   }
 
@@ -305,7 +317,7 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
     throw new Error('En "PLANIFICACION LB" no encontre columnas semanales validas (fecha/WEEK_KEY).');
   }
 
-  for (let r = 1; r < v.length; r++) {
+  for (let r = headerRowIdx + 1; r < v.length; r++) {
     const personal = v[r][iPersonal];
     const etapa    = v[r][iEtapa];
     const act      = v[r][iAct];
@@ -456,7 +468,18 @@ function transformAvanceRealMatriz_(sheet, weekMap, headerRowIndex1based, hasCan
 function transformAvanceRealMatriz_(sheet, weekMap, headerRowIndex1based, hasCantTotalCol) {
   const values = sheet.getDataRange().getValues();
 
-  const headerRow = values[headerRowIndex1based - 1];
+  // Auto-detectar fila de headers: buscar en las primeras 5 filas
+  // la que contenga ETAPA + ACTIVIDAD + TAREA
+  let headerIdx = headerRowIndex1based - 1;
+  for (let r = 0; r < Math.min(5, values.length); r++) {
+    const row = values[r].map(String);
+    if (row.indexOf("ETAPA") !== -1 && row.indexOf("ACTIVIDAD") !== -1 && row.indexOf("TAREA") !== -1) {
+      headerIdx = r;
+      break;
+    }
+  }
+
+  const headerRow = values[headerIdx];
   const h = headerRow.map(String);
 
   const iPersonal = indexOfAny_(h, ["PERSONAL", "Personal"]);
@@ -465,7 +488,7 @@ function transformAvanceRealMatriz_(sheet, weekMap, headerRowIndex1based, hasCan
   const iTar      = h.indexOf("TAREA");
 
   if ([iPersonal, iEtapa, iAct, iTar].some(x => x === -1)) {
-    throw new Error(`En "${sheet.getName()}" no encontre PERSONAL/ETAPA/ACTIVIDAD/TAREA en fila ${headerRowIndex1based}.`);
+    throw new Error(`En "${sheet.getName()}" no encontre PERSONAL/ETAPA/ACTIVIDAD/TAREA en fila ${headerIdx + 1}.`);
   }
 
   const CANT_TOTAL_NAMES = [
@@ -511,7 +534,7 @@ function transformAvanceRealMatriz_(sheet, weekMap, headerRowIndex1based, hasCan
 
   const out = [outHeaders];
 
-  for (let r = headerRowIndex1based; r < values.length; r++) {
+  for (let r = headerIdx + 1; r < values.length; r++) {
     const row      = values[r];
     const personal = row[iPersonal];
     const etapa    = row[iEtapa];
