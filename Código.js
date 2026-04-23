@@ -605,75 +605,66 @@ function construirTaskMeta_(shPlan) {
 //  TABLA CRUZADA: Rendimientos por Tarea × Etapa
 // ============================================================
 function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
-  // Recopilar etapas únicas
+  // 1. Etapas únicas
   const etapaMap = {};
   for (const m of Object.values(taskMeta)) {
     if (m.etapa && !etapaMap[m.etapa]) etapaMap[m.etapa] = m.etapaOrig || m.etapa;
   }
   const stages = Object.keys(etapaMap).sort();
 
-  // Keywords de cada etapa (texto después de "eN - ") + variante sin "de"
-  const kwPhrases = [];
+  // 2. Construir lista de keywords a remover del nombre de tarea
+  //    Incluye el keyword completo y variante sin "de"
+  const kwList = [];
   for (const etapa of stages) {
-    const kw = etapa.replace(/^e\d+\s*[-–]\s*/i, '').trim();
-    if (kw) {
-      kwPhrases.push(kw);
-      const kwNoDe = kw.replace(/\bde\b/g, '').replace(/\s+/g, ' ').trim();
-      if (kwNoDe !== kw) kwPhrases.push(kwNoDe);
-    }
+    // Strip "E01 – " or "E01 " prefix (dash is optional)
+    const kw = etapa.replace(/^e\d+\s*[-–]?\s*/i, '').trim();
+    if (!kw) continue;
+    kwList.push(kw);
+    const kwNoDe = kw.replace(/\bde\b\s*/g, '').replace(/\s+/g, ' ').trim();
+    if (kwNoDe && kwNoDe !== kw) kwList.push(kwNoDe);
   }
-
-  // Palabras individuales de los keywords (para strip de palabras sueltas al final)
-  const kwWordSet = new Set();
-  for (const kw of kwPhrases) kw.split(/\s+/).forEach(w => w.length > 2 && kwWordSet.add(w));
+  // Ordenar de mayor a menor longitud para que las frases largas tengan prioridad
+  kwList.sort((a, b) => b.length - a.length);
 
   function escR_(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-  function strippedBase_(tarea) {
-    let s = tarea;
-
-    // 1. Strip cada keyword phrase + TODO lo que venga después (incluye "– PEAD", etc.)
-    for (const kw of kwPhrases) {
-      s = s.replace(new RegExp('\\s*[-–]?\\s*' + escR_(kw) + '(\\s.*)?$', 'i'), '').trim();
+  // Stripping: remove keyword + todo lo posterior + separadores sobrantes
+  function stripBase_(name) {
+    let s = name;
+    for (const kw of kwList) {
+      // Remover: (sep opcional)(keyword)(resto de línea)
+      s = s.replace(new RegExp('(\\s*[-–]?\\s*)' + escR_(kw) + '(\\s.*)?$', 'i'), '').trim();
     }
-
-    // 2. Strip separador con texto restante (ej: " – PEAD")
-    s = s.replace(/\s*[-–]+.*$/, '').trim();
-
-    // 3. Strip palabras finales sueltas que sean keywords de zona (ej: "Pasarela", "Bombas")
-    let changed = true;
-    while (changed) {
-      changed = false;
-      const parts = s.split(/\s+/);
-      if (parts.length > 2) {
-        const last = parts[parts.length - 1].toLowerCase();
-        if (kwWordSet.has(last)) { s = parts.slice(0, -1).join(' ').trim(); changed = true; }
-      }
-    }
-
+    // Limpiar separadores finales sobrantes (ej: " –")
+    s = s.replace(/\s*[-–]+\s*$/, '').trim();
     return s;
   }
 
-  // Clave de agrupación: normalizar plural (colectores → colector, espinas → espina)
+  // Clave de agrupación: nombre stripped + normalización de plural
   function groupKey_(base) {
     return base.toLowerCase()
-      .replace(/ores\b/g, 'or')   // colectores → colector
-      .replace(/ines\b/g, 'in')   // espines → espin (si aplica)
-      .replace(/([^aeiou])es\b/g, '$1') // consonante + es → quita "es"
+      .replace(/ores\b/g, 'or')          // colectores → colector
+      .replace(/([^aeiou\s])es\b/g, '$1') // espinas → espina, colectores ya cubierto
       .trim();
   }
 
-  // Agrupar: groupKey -> { _orig, [etapa]: agg }
-  const groupMap  = {}; // groupKey -> aggMap entry
-  const groupOrig = {}; // groupKey -> display name (primer nombre visto)
+  // 3. Primera pasada: construir grupos por groupKey
+  const groupData  = {}; // groupKey → { display, [etapa]: agg }
+  const groupDisplay = {}; // groupKey → nombre para mostrar (más corto encontrado)
 
   for (const [k, m] of Object.entries(taskMeta)) {
-    const baseNorm = strippedBase_(m.tarea);
-    const baseOrig = strippedBase_(m.tareaOrig || m.tarea) || (m.tareaOrig || m.tarea);
-    const gk       = groupKey_(baseNorm);
+    const baseNorm  = stripBase_(m.tarea);
+    const baseOrig  = stripBase_((m.tareaOrig || m.tarea).toLowerCase()) ;
+    const baseOrigDisplay = m.tareaOrig
+      ? m.tareaOrig.replace(new RegExp('(\\s*[-–]?\\s*)(' + kwList.map(escR_).join('|') + ')(\\s.*)?$', 'i'), '').replace(/\s*[-–]+\s*$/, '').trim()
+      : baseNorm;
 
-    if (!groupMap[gk]) { groupMap[gk] = {}; groupOrig[gk] = baseOrig; }
-    const agg = groupMap[gk];
+    const gk = groupKey_(baseNorm);
+    if (!groupData[gk]) { groupData[gk] = {}; groupDisplay[gk] = baseOrigDisplay; }
+    // Preferir el nombre más corto como display
+    if (baseOrigDisplay.length < (groupDisplay[gk] || '').length) groupDisplay[gk] = baseOrigDisplay;
+
+    const agg = groupData[gk];
     if (!agg[m.etapa]) agg[m.etapa] = { hhPlan: 0, qtyPlan: 0, hhReal: 0, qtyReal: 0 };
     agg[m.etapa].hhPlan  += m.hhPlan  || 0;
     agg[m.etapa].qtyPlan += m.qtyPlan || 0;
@@ -682,27 +673,101 @@ function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
     agg[m.etapa].qtyReal += cut.qtyReal || 0;
   }
 
-  // Construir filas
+  // 4. Segunda pasada: merge por prefijo (maneja "Montaje Bies" + "Montaje Bies Pasarela")
+  const gkList = Object.keys(groupData).sort((a, b) => a.length - b.length);
+  const canonical = {}; // gk → gk canónico (el más corto que sea prefijo)
+  for (let i = 0; i < gkList.length; i++) {
+    for (let j = 0; j < i; j++) {
+      const shorter = canonical[gkList[j]] || gkList[j];
+      const longer  = gkList[i];
+      if (longer === shorter) continue;
+      if (longer.startsWith(shorter + ' ') || longer.startsWith(shorter + '-')) {
+        canonical[longer] = shorter;
+        // Merge datos de longer en shorter
+        for (const etapa of stages) {
+          const src = groupData[longer][etapa];
+          if (!src) continue;
+          if (!groupData[shorter][etapa]) groupData[shorter][etapa] = { hhPlan:0, qtyPlan:0, hhReal:0, qtyReal:0 };
+          groupData[shorter][etapa].hhPlan  += src.hhPlan  || 0;
+          groupData[shorter][etapa].qtyPlan += src.qtyPlan || 0;
+          groupData[shorter][etapa].hhReal  += src.hhReal  || 0;
+          groupData[shorter][etapa].qtyReal += src.qtyReal || 0;
+        }
+        delete groupData[longer];
+        break;
+      }
+    }
+  }
+
+  // 5. Construir filas
   const rows = [];
-  for (const [gk, agg] of Object.entries(groupMap)) {
+  for (const [gk, agg] of Object.entries(groupData)) {
     const real = {}, teorico = {};
-    let hasAnyData = false;
+    let hasData = false;
     for (const etapa of stages) {
       const a = agg[etapa];
       if (!a || !(a.qtyPlan > 0)) { real[etapa] = null; teorico[etapa] = null; continue; }
-      hasAnyData = true;
+      hasData = true;
       teorico[etapa] = a.hhPlan  > 0 ? a.hhPlan  / a.qtyPlan : null;
       real[etapa]    = a.qtyReal > 0 ? a.hhReal  / a.qtyReal : null;
     }
-    if (hasAnyData) rows.push({ nombre: groupOrig[gk], real, teorico });
+    if (hasData) rows.push({ nombre: groupDisplay[gk] || gk, real, teorico });
   }
 
   rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  return { stages: stages.map(e => ({ key: e, label: etapaMap[e] })), rows };
+}
 
-  return {
-    stages: stages.map(e => ({ key: e, label: etapaMap[e] })),
-    rows
-  };
+// Run this from the Apps Script editor to diagnose grouping issues.
+// Check View > Logs (Ctrl+Enter) after running.
+function debugRendimientosCruzados() {
+  const ss     = SpreadsheetApp.getActive();
+  const shPlan = ss.getSheetByName('Planificación Inicial');
+  if (!shPlan) { Logger.log('No se encontró hoja "Planificación Inicial"'); return; }
+
+  const taskMeta = construirTaskMeta_(shPlan);
+
+  // Build the same kwList the main function uses
+  const etapaMap = {};
+  for (const m of Object.values(taskMeta)) {
+    if (m.etapa && !etapaMap[m.etapa]) etapaMap[m.etapa] = m.etapaOrig || m.etapa;
+  }
+  const stages = Object.keys(etapaMap).sort();
+  const kwList = [];
+  for (const etapa of stages) {
+    const kw = etapa.replace(/^e\d+\s*[-–]?\s*/i, '').trim();
+    if (!kw) continue;
+    kwList.push(kw);
+    const kwNoDe = kw.replace(/\bde\b\s*/g, '').replace(/\s+/g, ' ').trim();
+    if (kwNoDe && kwNoDe !== kw) kwList.push(kwNoDe);
+  }
+  kwList.sort((a, b) => b.length - a.length);
+
+  function escR_(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function stripBase_(name) {
+    let s = name;
+    for (const kw of kwList) {
+      s = s.replace(new RegExp('(\\s*[-–]?\\s*)' + escR_(kw) + '(\\s.*)?$', 'i'), '').trim();
+    }
+    return s.replace(/\s*[-–]+\s*$/, '').trim();
+  }
+  function groupKey_(base) {
+    return base.toLowerCase().replace(/ores\b/g, 'or').replace(/([^aeiou\s])es\b/g, '$1').trim();
+  }
+
+  Logger.log('=== ETAPAS ===');
+  Logger.log(stages.join('\n'));
+  Logger.log('=== KEYWORDS ===');
+  Logger.log(kwList.join(', '));
+  Logger.log('=== TAREA → STRIPPED → GROUPKEY ===');
+
+  const seen = {};
+  for (const m of Object.values(taskMeta)) {
+    const stripped = stripBase_(m.tarea);
+    const gk = groupKey_(stripped);
+    const line = `"${m.tarea}" → "${stripped}" → gk:"${gk}"`;
+    if (!seen[line]) { seen[line] = true; Logger.log(line); }
+  }
 }
 
 function construirDenominadores_(taskMeta) {
