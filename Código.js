@@ -253,7 +253,7 @@ function getDashboardData() {
 
     rendimientoSemanalMap[wk] = {
       hhPor1Pct: (inReal && earnedHHRealWeek > 0 && hhRealWeek != null && hhRealWeek > 0)
-        ? hhRealWeek / (earnedHHRealWeek / hhPlanTotal * 100)
+        ? Math.round(hhRealWeek / (earnedHHRealWeek / hhPlanTotal * 100))
         : null
     };
   }
