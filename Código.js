@@ -387,7 +387,7 @@ function construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cut
   const stages = Object.keys(denom.byEtapa || {}).sort((a, b) => a.localeCompare(b));
 
   const rows = [];
-  rows.push(["ETAPA", "m (corte / total)", "HH Plan (corte)", "HH Real (corte)", "Δ HH", "% Fisico Plan", "% Fisico Real", "Δ % (pp)"]);
+  rows.push(["ETAPA", "m (corte / total)", "Rend. Plan (HH/m)", "Rend. Real (HH/m)", "HH Plan (corte)", "HH Real (corte)", "Δ HH", "% Fisico Plan", "% Fisico Real", "Δ % (pp)"]);
 
   for (const etapa of stages) {
     const hhP = hhAcumGrupoHastaCorte_(hhPlanByWeekStage, etapa, cutMonday);
@@ -397,19 +397,27 @@ function construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cut
     const pctPlanEtapa = denomEtapa > 0 ? pctFisicoGrupoDesdeQty_(taskMeta, "etapa", etapa, denomEtapa, qtyPlanCutByTask) : null;
     const pctRealEtapa = denomEtapa > 0 ? pctFisicoGrupoDesdeQty_(taskMeta, "etapa", etapa, denomEtapa, qtyRealCutByTask) : null;
 
-    // Metros (unidad === "m") planificados totales y reales al corte para esta etapa
-    let mTotal = 0;
-    let mReal  = 0;
+    // Metros (unidad === "m") y rendimientos para esta etapa
+    let mTotal  = 0;
+    let mReal   = 0;
+    let hhPlanM = 0;
+    let hhRealM = 0;
     for (const [k, m] of Object.entries(taskMeta)) {
       if (m.etapa !== etapa || String(m.unidad || "").trim().toLowerCase() !== "m") continue;
-      mTotal += Number(m.qtyPlan || 0);
-      mReal  += Number(qtyRealCutByTask[k] || 0);
+      mTotal  += Number(m.qtyPlan || 0);
+      mReal   += Number(qtyRealCutByTask[k] || 0);
+      hhPlanM += Number(m.hhPlan || 0);
+      hhRealM += Number((byTaskCut[k] && byTaskCut[k].hhReal) || 0);
     }
-    const metrosCell = mTotal > 0 ? { r: mReal, t: mTotal } : null;
+    const metrosCell = mTotal  > 0 ? { r: mReal, t: mTotal } : null;
+    const rendPlan   = mTotal  > 0 ? hhPlanM / mTotal        : null;
+    const rendReal   = mReal   > 0 ? hhRealM / mReal         : null;
 
     rows.push([
       etapa,
       metrosCell,
+      rendPlan,
+      rendReal,
       hhP,
       hhR,
       hhR - hhP,
