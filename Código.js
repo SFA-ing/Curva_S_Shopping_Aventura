@@ -387,7 +387,7 @@ function construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cut
   const stages = Object.keys(denom.byEtapa || {}).sort((a, b) => a.localeCompare(b));
 
   const rows = [];
-  rows.push(["ETAPA", "HH Plan (corte)", "HH Real (corte)", "Δ HH", "% Fisico Plan", "% Fisico Real", "Δ % (pp)", "m (corte / total)"]);
+  rows.push(["ETAPA", "m (corte / total)", "HH Plan (corte)", "HH Real (corte)", "Δ HH", "% Fisico Plan", "% Fisico Real", "Δ % (pp)"]);
 
   for (const etapa of stages) {
     const hhP = hhAcumGrupoHastaCorte_(hhPlanByWeekStage, etapa, cutMonday);
@@ -409,13 +409,13 @@ function construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cut
 
     rows.push([
       etapa,
+      metrosCell,
       hhP,
       hhR,
       hhR - hhP,
       pctPlanEtapa,
       pctRealEtapa,
-      (pctPlanEtapa != null && pctRealEtapa != null) ? (pctRealEtapa - pctPlanEtapa) : null,
-      metrosCell
+      (pctPlanEtapa != null && pctRealEtapa != null) ? (pctRealEtapa - pctPlanEtapa) : null
     ]);
   }
 
