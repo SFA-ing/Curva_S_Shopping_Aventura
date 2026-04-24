@@ -774,11 +774,15 @@
 
     // HH Totales Proyectadas:
     // Real    = HH gastadas + pendiente al rendimiento actual → ¿cuánto costará si sigo igual?
-    // Teórico = total HH presupuestadas en el Excel (todas las tareas)
+    // Teórico = total HH presupuestadas en el Excel (plan de línea base)
     const hhPlanExcel   = Number(k.hhTotalPlanExcel||0) || (hhR + hhPT);
     const hhTotProyReal = hhR  + hhPRe;
     const hhTotProyTeor = hhPlanExcel;
     const hhTotDiff     = hhTotProyReal - hhTotProyTeor;
+
+    // HH pend. (Teórico) = plan total − lo que el plan prevé gastado hasta el avance actual
+    const hhPTDisplay = Math.max(0, hhPlanExcel - hhPrv);
+    const dPendDisplay = hhPRe - hhPTDisplay;
 
     // Layout: Real (izq) | Teórico/Plan (centro) | Desfase (der)
     document.getElementById("kpisHH").innerHTML = [
@@ -793,9 +797,9 @@
       kpiCard((dHH>=0?"+":"")+fmtNumber(dHH,0), "HH", "Diferencia", colorForDiff(dHH, true)),
 
       // Fila 3: HH pendientes
-      kpiCard(fmtNumber(hhPRe,0),  "HH", "HH pend. (Rend.)",   "c-orange"),
-      kpiCard(fmtNumber(hhPT,0),   "HH", "HH pend. (Teórico)", "c-neu"),
-      kpiCard((dPend>=0?"+":"")+fmtNumber(dPend,0), "HH", "Desfase HH pend.", colorForDiff(dPend, true)),
+      kpiCard(fmtNumber(hhPRe,0),        "HH", "HH pend. (Rend.)",   "c-orange"),
+      kpiCard(fmtNumber(hhPTDisplay,0),  "HH", "HH pend. (Teórico)", "c-neu"),
+      kpiCard((dPendDisplay>=0?"+":"")+fmtNumber(dPendDisplay,0), "HH", "Desfase HH pend.", colorForDiff(dPendDisplay, true)),
 
       // Fila 4: Productividad HH por 1%
       kpiCard(hh1R!=null?fmtNumber(hh1R,2):"-",  "HH/1%", "HH por 1% (Real)",    color1R),
