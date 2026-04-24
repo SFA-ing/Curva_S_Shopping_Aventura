@@ -600,11 +600,12 @@ function construirTaskMeta_(shPlan) {
 
     if (!map[key]) {
       map[key] = {
-        etapa    : eta,
-        etapaOrig: String(v[r][iEta] || "").trim(),
-        actividad: act,
-        tarea    : tar,
-        tareaOrig: String(v[r][iTar] || "").trim(),
+        etapa       : eta,
+        etapaOrig   : String(v[r][iEta] || "").trim(),
+        actividad   : act,
+        actividadOrig: String(v[r][iAct] || "").trim(),
+        tarea       : tar,
+        tareaOrig   : String(v[r][iTar] || "").trim(),
         unidad,
         qtyPlan,
         hhPlan,
@@ -753,12 +754,12 @@ function construirTablaAvancePorSistema_(taskMeta, byTaskCut) {
     { key: "pruebas",    label: "Pruebas Hidráulicas",  re: /prueba/i   },
   ];
 
-  const sysMap = {}; // etapa (normalizada) → { label, slots }
+  const sysMap = {}; // actividad (normalizada) → { label, slots }
   for (const [k, m] of Object.entries(taskMeta)) {
     const col = COLS.find(c => c.re.test(m.tareaOrig || m.tarea));
     if (!col) continue;
-    const sysKey = m.etapa;
-    if (!sysMap[sysKey]) sysMap[sysKey] = { label: m.etapaOrig || m.etapa, slots: {} };
+    const sysKey = m.actividad;
+    if (!sysMap[sysKey]) sysMap[sysKey] = { label: m.actividadOrig || m.actividad, slots: {} };
     if (!sysMap[sysKey].slots[col.key]) sysMap[sysKey].slots[col.key] = { qtyPlan: 0, qtyReal: 0 };
     sysMap[sysKey].slots[col.key].qtyPlan += m.qtyPlan || 0;
     const cut = byTaskCut[k] || {};
