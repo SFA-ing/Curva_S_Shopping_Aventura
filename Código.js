@@ -299,6 +299,9 @@ function getDashboardData() {
     curveSeries.push([wk, v.hhPlanAc, v.hhRealAc, v.pctPlan, v.pctReal]);
   }
 
+  // HH plan total = último valor acumulado de la curva plan (suma de todos los Avance HH semanales)
+  const hhPlanAcFinal = weeks.length > 0 ? (curveMap[weeks[weeks.length - 1]]?.hhPlanAc ?? 0) : 0;
+
   const last6       = ultimasNSemanasHasta_(weeks, cutMonday, 6);
   const trendSeries = [["WEEK_KEY", "HH por 1% avance"]];
   for (const wk of last6) {
@@ -364,7 +367,8 @@ function getDashboardData() {
     hhPor1PctReal,
     metrosTotalPlan,
     metrosTotalReal,
-    hhTotalPlanExcel
+    hhTotalPlanExcel,
+    hhPlanAcFinal
   };
 
   return {
