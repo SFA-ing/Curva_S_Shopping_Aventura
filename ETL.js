@@ -242,6 +242,7 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
     const hhTot  = hhTotFix_(v[r][iHHTot]);
     const unidad = v[r][iUni];
 
+    let wroteAny = false;
     for (let c = startWeekCol; c < h.length; c++) {
       const header = v[0][c];
       if (!header) continue;
@@ -255,12 +256,14 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
       const qtyWeek = qtyTot * pct;
       const hhWeek  = hhTot  * pct;
 
-      out.push([
-        wkKey,
-        personal, etapa, act, tar,
-        qtyTot, unidad, rend, hhTot,
-        qtyWeek, hhWeek
-      ]);
+      out.push([wkKey, personal, etapa, act, tar, qtyTot, unidad, rend, hhTot, qtyWeek, hhWeek]);
+      wroteAny = true;
+    }
+    // Fila catálogo: asegura que toda tarea con HH aparezca en la hoja
+    // aunque no tenga avance semanal (todas las columnas = 0).
+    // La clave "" es ignorada por sumaPorSemana_ y similares.
+    if (!wroteAny && hhTot > 0) {
+      out.push(["", personal, etapa, act, tar, qtyTot, unidad, rend, hhTot, 0, 0]);
     }
   }
 
@@ -329,6 +332,7 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
     const hhTot  = hhTotFix_(v[r][iHHTot]);
     const unidad = v[r][iUni];
 
+    let wroteAny2 = false;
     for (const weekCol of weekCols) {
       const qtyWeek = toNum_(v[r][weekCol.col]);
       if (!qtyWeek) continue;
@@ -340,12 +344,13 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
         ? (hhTot * pctWeek)
         : (rend > 0 ? qtyWeek * rend : 0);
 
-      out.push([
-        weekCol.wkKey,
-        personal, etapa, act, tar,
-        qtyTot, unidad, rend, hhTot,
-        qtyWeek, hhWeek
-      ]);
+      out.push([weekCol.wkKey, personal, etapa, act, tar, qtyTot, unidad, rend, hhTot, qtyWeek, hhWeek]);
+      wroteAny2 = true;
+    }
+    // Fila catálogo: garantiza que toda tarea con HH figure en la hoja
+    // aunque no tenga avance semanal planificado.
+    if (!wroteAny2 && hhTot > 0) {
+      out.push(["", personal, etapa, act, tar, qtyTot, unidad, rend, hhTot, 0, 0]);
     }
   }
 
