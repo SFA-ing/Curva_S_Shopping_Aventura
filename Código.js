@@ -336,10 +336,14 @@ function getDashboardData() {
 
   // Metros consolidados de cañería (unidad === "m") para barra de avance
   let metrosTotalPlan = 0, metrosTotalReal = 0;
+  // Total HH plan de TODAS las tareas (incluyendo las sin cantidad física)
+  let hhTotalPlanExcel = 0;
   for (const [k, m] of Object.entries(taskMeta)) {
-    if (String(m.unidad || "").trim().toLowerCase() !== "m") continue;
-    metrosTotalPlan += Number(m.qtyPlan || 0);
-    metrosTotalReal += Number((byTaskCut[k] && byTaskCut[k].qtyReal) || 0);
+    if (String(m.unidad || "").trim().toLowerCase() === "m") {
+      metrosTotalPlan += Number(m.qtyPlan || 0);
+      metrosTotalReal += Number((byTaskCut[k] && byTaskCut[k].qtyReal) || 0);
+    }
+    hhTotalPlanExcel += Number(m.hhPlan || 0);
   }
 
   const kpis = {
@@ -359,7 +363,8 @@ function getDashboardData() {
     hhPor1PctTeor,
     hhPor1PctReal,
     metrosTotalPlan,
-    metrosTotalReal
+    metrosTotalReal,
+    hhTotalPlanExcel
   };
 
   return {

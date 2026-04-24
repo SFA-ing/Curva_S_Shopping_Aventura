@@ -773,12 +773,12 @@
       : "c-neu";
 
     // HH Totales Proyectadas:
-    // Real  = HH ya gastadas + pendiente al rendimiento actual  → ¿cuánto costará si sigo igual?
-    // Teórico = HH ya gastadas + pendiente al rendimiento plan  → ¿cuánto debería costar según plan?
-    //           (= hhPlanTotal cuando no hay sobreejcución)
-    const hhTotProyReal  = hhR  + hhPRe;
-    const hhTotProyTeor  = hhR  + hhPT;
-    const hhTotDiff      = hhTotProyReal - hhTotProyTeor;
+    // Real    = HH gastadas + pendiente al rendimiento actual → ¿cuánto costará si sigo igual?
+    // Teórico = total HH presupuestadas en el Excel (todas las tareas)
+    const hhPlanExcel   = Number(k.hhTotalPlanExcel||0) || (hhR + hhPT);
+    const hhTotProyReal = hhR  + hhPRe;
+    const hhTotProyTeor = hhPlanExcel;
+    const hhTotDiff     = hhTotProyReal - hhTotProyTeor;
 
     // Layout: Real (izq) | Teórico/Plan (centro) | Desfase (der)
     document.getElementById("kpisHH").innerHTML = [
