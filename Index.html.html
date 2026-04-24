@@ -1110,7 +1110,8 @@
     FULL_ACT_TABLE=sortByHHRealDesc(res.activitySummary);
 
     const stageSummary = res.stageSummary || [["ETAPA","m (corte / total)","Rend. Plan (HH/m)","Rend. Real (HH/m)","HH Plan (corte)","HH Real (corte)","Δ HH","% Fisico Plan","% Fisico Real","Δ % (pp)"]];
-    renderTable("stageTable", sortByHHRealDesc(stageSummary), [
+    const stageSorted = sortByHHRealDesc(stageSummary);
+    renderTable("stageTable", stageSorted, [
       x=>x,
       x=>{ if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} m / ${fmtNumber(x.t,0)} m`; },
       x=>x==null?'-':fmtNumber(x,2)+' HH/m',
@@ -1122,6 +1123,17 @@
       x=>fmtPct(x,2),
       x=>{const n=Number(x),c=n<0?"c-neg":n>0?"c-pos":"c-neu"; return `<span class="${c}">${fmtPct(n,2)}</span>`;},
     ]);
+    // Fila de totales de cañería (metros)
+    (function(){
+      let mT=0, mR=0, has=false;
+      stageSorted.slice(1).forEach(row=>{ const m=row[1]; if(m&&typeof m==='object'){mT+=m.t||0;mR+=m.r||0;has=true;} });
+      if(!has) return;
+      const tbl = document.getElementById("stageTable");
+      const tf = tbl.createTFoot();
+      const tr = tf.insertRow();
+      tr.style.cssText='border-top:2px solid #94a3b8;font-weight:700;background:#f1f5f9;';
+      tr.innerHTML=`<td>Total cañería</td><td>${fmtNumber(mR,0)} m / ${fmtNumber(mT,0)} m</td><td colspan="8"></td>`;
+    })();
 
     renderTable("actTable", FULL_ACT_TABLE, [
       x=>x,
