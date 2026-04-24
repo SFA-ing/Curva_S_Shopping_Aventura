@@ -385,7 +385,8 @@ function getDashboardData() {
   stageSummary,
   activitySummary,
   taskTable,
-  rendimientosCruzados: construirTablaRendimientosCruzados_(taskMeta, byTaskCut)
+  rendimientosCruzados: construirTablaRendimientosCruzados_(taskMeta, byTaskCut),
+  avancePorSistema: construirTablaAvancePorSistema_(taskMeta, byTaskCut)
   };
 }
 
@@ -739,6 +740,46 @@ function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
 
   rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
   return { stages: stages.map(e => ({ key: e, label: etapaMap[e] })), rows };
+}
+
+// ============================================================
+//  TABLA: Avance por Sistema × Tarea (4 tareas clave)
+// ============================================================
+function construirTablaAvancePorSistema_(taskMeta, byTaskCut) {
+  const COLS = [
+    { key: "colectores", label: "Montaje Colectores",  re: /colector/i },
+    { key: "espinas",    label: "Montaje Espinas",      re: /espina/i   },
+    { key: "bies",       label: "Montaje BIEs",         re: /\bbies?\b/i },
+    { key: "pruebas",    label: "Pruebas Hidráulicas",  re: /prueba/i   },
+  ];
+
+  const sysMap = {}; // etapa (normalizada) → { label, slots }
+  for (const [k, m] of Object.entries(taskMeta)) {
+    const col = COLS.find(c => c.re.test(m.tareaOrig || m.tarea));
+    if (!col) continue;
+    const sysKey = m.etapa;
+    if (!sysMap[sysKey]) sysMap[sysKey] = { label: m.etapaOrig || m.etapa, slots: {} };
+    if (!sysMap[sysKey].slots[col.key]) sysMap[sysKey].slots[col.key] = { qtyPlan: 0, qtyReal: 0 };
+    sysMap[sysKey].slots[col.key].qtyPlan += m.qtyPlan || 0;
+    const cut = byTaskCut[k] || {};
+    sysMap[sysKey].slots[col.key].qtyReal += cut.qtyReal || 0;
+  }
+
+  const rows = Object.keys(sysMap).sort().map(sysKey => {
+    const sys = sysMap[sysKey];
+    const row = { sistema: sys.label };
+    for (const col of COLS) {
+      const slot = sys.slots[col.key];
+      if (!slot || !(slot.qtyPlan > 0)) {
+        row[col.key] = null;
+      } else {
+        row[col.key] = Math.min(1, slot.qtyReal / slot.qtyPlan);
+      }
+    }
+    return row;
+  });
+
+  return { cols: COLS.map(c => ({ key: c.key, label: c.label })), rows };
 }
 
 // Run this from the Apps Script editor to diagnose grouping issues.

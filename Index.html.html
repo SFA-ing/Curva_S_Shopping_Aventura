@@ -346,6 +346,21 @@
     #rendCruzTable td.rend-bad      { background:#fee2e2; color:var(--red); font-weight:700; }
     #rendCruzTable td.rend-good     { color:var(--green); }
     #rendCruzTable td.rend-teo      { text-align:center; font-size:12px; color:#475569; }
+
+    /* Avance por Sistema y Tarea */
+    #sistemaTable th               { background:var(--soft); font-size:11px; font-weight:700; text-align:center; padding:6px 10px; white-space:nowrap; }
+    #sistemaTable th:first-child   { text-align:left; }
+    #sistemaTable td               { font-size:12px; padding:4px 6px; text-align:center; vertical-align:middle; }
+    #sistemaTable td:first-child   { text-align:left; font-weight:600; font-size:12px; white-space:nowrap; }
+    #sistemaTable td.sys-na        { background:#e2e8f0; }
+    #sistemaTable td.sys-done      { background:#dcfce7; color:#166534; font-weight:700; }
+    #sistemaTable td.sys-high      { background:#d1fae5; color:#065f46; }
+    #sistemaTable td.sys-mid       { background:#fef9c3; color:#854d0e; }
+    #sistemaTable td.sys-low       { background:#fee2e2; color:#991b1b; }
+    #sistemaTable td.sys-zero      { background:#fef2f2; color:#dc2626; }
+    #sistemaTable .sys-bar-wrap    { display:flex; align-items:center; gap:5px; justify-content:center; }
+    #sistemaTable .sys-bar         { height:8px; background:#94a3b8; border-radius:4px; flex:1; min-width:40px; position:relative; }
+    #sistemaTable .sys-bar-fill    { height:100%; border-radius:4px; transition:width .3s; }
     #rendCruzTable td.teo-null      { background:#e2e8f0; }
     #rendCruzTable th:first-child,
     #rendCruzTable td:first-child   { font-weight:600; min-width:180px; }
@@ -554,6 +569,14 @@
         <div class="panel-sub">HH/unidad real vs teórico por etapa. Naranja = peor que el plan.</div>
         <div class="tableWrap" style="overflow-x:auto;">
           <table id="rendCruzTable"></table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Avance por Sistema y Tarea</div>
+        <div class="panel-sub">% avance físico real por sistema (etapa) para las 4 tareas clave.</div>
+        <div class="tableWrap" style="overflow-x:auto;">
+          <table id="sistemaTable"></table>
         </div>
       </div>
 
@@ -1177,6 +1200,44 @@
     clearActivityFilter();
     renderTaskTableFiltered();
     renderRendimientosCruzados(res.rendimientosCruzados);
+    renderAvancePorSistema(res.avancePorSistema);
+  }
+
+  function renderAvancePorSistema(data) {
+    const el = document.getElementById("sistemaTable");
+    if (!data || !data.rows || !data.cols) { el.innerHTML = ''; return; }
+    const cols = data.cols;
+
+    // Cabecera
+    const thead = `<tr>
+      <th>Sistema</th>
+      ${cols.map(c => `<th>${c.label}</th>`).join('')}
+    </tr>`;
+
+    // Filas
+    let tbody = '';
+    for (const row of data.rows) {
+      let tds = '';
+      for (const col of cols) {
+        const v = row[col.key];
+        if (v === null || v === undefined) {
+          tds += `<td class="sys-na"></td>`;
+        } else {
+          const pct = v * 100;
+          const cls = pct >= 100 ? 'sys-done' : pct >= 75 ? 'sys-high' : pct >= 40 ? 'sys-mid' : pct > 0 ? 'sys-low' : 'sys-zero';
+          const fillColor = pct >= 100 ? '#16a34a' : pct >= 75 ? '#22c55e' : pct >= 40 ? '#eab308' : '#ef4444';
+          tds += `<td class="${cls}">
+            <div class="sys-bar-wrap">
+              <div class="sys-bar"><div class="sys-bar-fill" style="width:${Math.min(100,pct).toFixed(1)}%;background:${fillColor};"></div></div>
+              <span style="min-width:36px;font-family:'DM Mono',monospace;font-size:11px;">${fmtPct(v,1)}</span>
+            </div>
+          </td>`;
+        }
+      }
+      tbody += `<tr><td>${row.sistema}</td>${tds}</tr>`;
+    }
+
+    el.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
   }
 
   function renderRendimientosCruzados(data){
