@@ -334,9 +334,11 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
       if (!qtyWeek) continue;
 
       const pctWeek = qtyTot > 0 ? (qtyWeek / qtyTot) : 0;
-      const hhWeek = (rend > 0)
-        ? (qtyWeek * rend)
-        : (hhTot > 0 ? (hhTot * pctWeek) : 0);
+      // Priorizar hhTot × pctWeek (fuente de verdad = HH TOTALES del plan).
+      // Solo usar rend como fallback si hhTot no está disponible.
+      const hhWeek = (hhTot > 0)
+        ? (hhTot * pctWeek)
+        : (rend > 0 ? qtyWeek * rend : 0);
 
       out.push([
         weekCol.wkKey,
