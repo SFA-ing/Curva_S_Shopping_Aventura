@@ -1177,10 +1177,9 @@ function calcularProyecciones_(curveMap, weeks, cutMonday, pctRealCut, hhRealCut
       const pctFaltante  = Math.max(0, 1.0 - pctRealCut);
       const avancePorSem = pctFaltante / nSem;
 
-      // HH necesarias para ese avance adicional por semana con rendimiento real
-      // (si el rendimiento real es peor, necesito más HH por % avanzado)
-      const hhPorPctReal = pctRealCut > 0 ? (hhRealCut / (pctRealCut)) : globalHH;
-      const hhPorSemB    = avancePorSem * hhPorPctReal;
+      // HH por unidad de avance al rendimiento real acumulado
+      const hhPorUnidadReal = pctRealCut > 0 ? (hhRealCut / pctRealCut) : globalHH;
+      const hhPorSemB       = avancePorSem * hhPorUnidadReal;
 
       let pctB = pctRealCut;
       let hhB  = hhRealCut;
@@ -1190,7 +1189,12 @@ function calcularProyecciones_(curveMap, weeks, cutMonday, pctRealCut, hhRealCut
         hhB  = hhB + hhPorSemB;
         escB.push([wk, hhB, pctB]);
       }
-      hhExtraEscB = Math.max(0, hhB - hhRealCut - hhPendRend);
+
+      // HH extra = diferencia entre el avance necesario y el que el ritmo actual generaría
+      // Si el ritmo actual alcanza, no hacen falta HH adicionales (= 0)
+      const pctCubiertoPorRitmoActual = avgAvanceSem * nSem;
+      const pctShortfall = Math.max(0, pctFaltante - pctCubiertoPorRitmoActual);
+      hhExtraEscB = Math.round(pctShortfall * hhPorUnidadReal);
     }
   }
 
