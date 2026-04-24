@@ -334,6 +334,14 @@ function getDashboardData() {
   const activitySummary = construirResumenPorActividad_(shPlan, shHH, taskMeta, denom, byTaskCut, cutMonday);
   const taskTable       = construirTablaTareasV2_(shPlan, cutMonday, taskMeta, byTaskCut);
 
+  // Metros consolidados de cañería (unidad === "m") para barra de avance
+  let metrosTotalPlan = 0, metrosTotalReal = 0;
+  for (const [k, m] of Object.entries(taskMeta)) {
+    if (String(m.unidad || "").trim().toLowerCase() !== "m") continue;
+    metrosTotalPlan += Number(m.qtyPlan || 0);
+    metrosTotalReal += Number((byTaskCut[k] && byTaskCut[k].qtyReal) || 0);
+  }
+
   const kpis = {
     corte: { weekKey: cutWeekKey, mondayISO: formatISODate_(cutMonday) },
     hhReales          : hhRealCut,
@@ -349,7 +357,9 @@ function getDashboardData() {
     hhPendRend,
     diffPend,
     hhPor1PctTeor,
-    hhPor1PctReal
+    hhPor1PctReal,
+    metrosTotalPlan,
+    metrosTotalReal
   };
 
   return {

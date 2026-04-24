@@ -615,6 +615,10 @@
     const hhTot   = Number(k.hhPendTeorico||0) + hhReal; // total teórico
     const pctHH   = hhTot>0 ? hhReal/hhTot : 0;
 
+    const mPlan   = Number(k.metrosTotalPlan||0);
+    const mReal   = Number(k.metrosTotalReal||0);
+    const pctM    = mPlan>0 ? mReal/mPlan : 0;
+
     const atraso  = pctReal < pctPlan;
     const colorReal = atraso ? 'orange' : 'blue';
 
@@ -659,6 +663,25 @@
           <div class="bar-fill orange" style="width:${Math.min(100,pctHH*100).toFixed(2)}%"></div>
         </div>
       </div>
+
+      ${mPlan>0?`
+      <div class="bar-item">
+        <div class="bar-header">
+          <div class="bar-label">
+            <div class="bar-icon" style="background:#e0f2fe;color:#0369a1;">〰</div>
+            <div>
+              <div>AVANCE METROS DE CAÑERÍA</div>
+              <div class="bar-desc">${fmtNumber(mReal,0)} m instalados de ${fmtNumber(mPlan,0)} m totales</div>
+            </div>
+          </div>
+          <div class="bar-pct" style="color:#0369a1;">
+            ${fmtPctPlain(pctM,1)}%
+          </div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${Math.min(100,pctM*100).toFixed(2)}%;background:#0369a1;"></div>
+        </div>
+      </div>`:''}
     `;
 
     // Alerta
