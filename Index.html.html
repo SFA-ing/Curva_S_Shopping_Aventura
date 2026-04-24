@@ -772,10 +772,12 @@
       ? (hh1R > hh1T ? "c-neg" : "c-pos")
       : "c-neu";
 
-    // HH Totales Proyectadas: Real consumido + pendiente por rendimiento actual
-    // vs Teórico: HH Prev por avance + pendiente teórico
-    const hhTotProyReal  = hhR   + hhPRe;
-    const hhTotProyTeor  = hhPrv + hhPT;
+    // HH Totales Proyectadas:
+    // Real  = HH ya gastadas + pendiente al rendimiento actual  → ¿cuánto costará si sigo igual?
+    // Teórico = HH ya gastadas + pendiente al rendimiento plan  → ¿cuánto debería costar según plan?
+    //           (= hhPlanTotal cuando no hay sobreejcución)
+    const hhTotProyReal  = hhR  + hhPRe;
+    const hhTotProyTeor  = hhR  + hhPT;
     const hhTotDiff      = hhTotProyReal - hhTotProyTeor;
 
     // Layout: Real (izq) | Teórico/Plan (centro) | Desfase (der)
