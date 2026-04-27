@@ -1055,7 +1055,7 @@
       const cls=rowClassFn?(rowClassFn(row,ridx)||""):"";
       const tds=row.map((cell,idx)=>{
         const f=formatters?.[idx];
-        return `<td>${f?f(cell):(cell??"-")}</td>`;
+        return `<td>${f?f(cell,row):(cell??"-")}</td>`;
       }).join("");
       return `<tr class="${cls}">${tds}</tr>`;
     }).join("");
@@ -1064,7 +1064,12 @@
 
   function sortByHHRealDesc(rows){
     const h=rows[0], b=rows.slice(1);
-    b.sort((a,b2)=>(Number(b2[2])||0)-(Number(a[2])||0));
+    // Col 2 = hhCell {r, t} → ordenar por HH real (r)
+    b.sort((a,b2)=>{
+      const va = a[2]&&typeof a[2]==='object' ? (a[2].r||0) : (Number(a[2])||0);
+      const vb = b2[2]&&typeof b2[2]==='object' ? (b2[2].r||0) : (Number(b2[2])||0);
+      return vb - va;
+    });
     return [h,...b];
   }
 
@@ -1161,19 +1166,33 @@
     FULL_TASK_TABLE=res.taskTable;
     FULL_ACT_TABLE=sortByHHRealDesc(res.activitySummary);
 
-    const stageSummary = res.stageSummary || [["ETAPA","m (corte / total)","Rend. Plan (HH/m)","Rend. Real (HH/m)","HH Plan (corte)","HH Real (corte)","Δ HH","% Fisico Plan","% Fisico Real","Δ % (pp)"]];
+    const stageSummary = res.stageSummary || [["ETAPA","m (corte / total)","HH (corte / total)","% Avance HH","% Avance Plan","% Avance Real","Rend. Plan / Real"]];
     const stageSorted = sortByHHRealDesc(stageSummary);
     renderTable("stageTable", stageSorted, [
-      x=>x,
-      x=>{ if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} m / ${fmtNumber(x.t,0)} m`; },
-      x=>x==null?'-':fmtNumber(x,2)+' HH/m',
-      x=>x==null?'-':fmtNumber(x,2)+' HH/m',
-      x=>fmtNumber(x,2),
-      x=>fmtNumber(x,2),
-      x=>{const n=Number(x),c=n>0?"c-neg":n<0?"c-pos":"c-neu"; return `<span class="${c}">${fmtNumber(n,2)}</span>`;},
-      x=>fmtPct(x,2),
-      x=>fmtPct(x,2),
-      x=>{const n=Number(x),c=n<0?"c-neg":n>0?"c-pos":"c-neu"; return `<span class="${c}">${fmtPct(n,2)}</span>`;},
+      // Col 0: ETAPA
+      x => x,
+      // Col 1: M (corte / total)
+      x => { if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} m / ${fmtNumber(x.t,0)} m`; },
+      // Col 2: HH (corte / total)
+      x => { if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} / ${fmtNumber(x.t,0)} HH`; },
+      // Col 3: % Avance HH
+      x => x==null ? '-' : fmtPct(x, 1),
+      // Col 4: % Avance Plan
+      x => x==null ? '-' : fmtPct(x, 2),
+      // Col 5: % Avance Real  (verde si ≥ Plan, rojo si <)
+      (x, row) => {
+        if(x==null) return '-';
+        const plan = row[4];
+        const cls = (plan==null || x >= plan) ? 'c-pos' : 'c-neg';
+        return `<span class="${cls}">${fmtPct(x,2)}</span>`;
+      },
+      // Col 6: Rend. Plan / Rend. Real
+      x => {
+        if(!x||typeof x!=='object') return '-';
+        const rp = x.plan!=null ? fmtNumber(x.plan,2)+' HH/m' : '-';
+        const rr = x.real!=null ? fmtNumber(x.real,2)+' HH/m' : '-';
+        return `<span style="color:#475569">${rp}</span> / <span style="color:#0f172a">${rr}</span>`;
+      },
     ]);
     // Fila de totales de cañería (metros)
     (function(){
@@ -1184,7 +1203,7 @@
       const tf = tbl.createTFoot();
       const tr = tf.insertRow();
       tr.style.cssText='border-top:2px solid #94a3b8;font-weight:700;background:#f1f5f9;';
-      tr.innerHTML=`<td>Total cañería</td><td>${fmtNumber(mR,0)} m / ${fmtNumber(mT,0)} m</td><td colspan="8"></td>`;
+      tr.innerHTML=`<td>Total cañería</td><td>${fmtNumber(mR,0)} m / ${fmtNumber(mT,0)} m</td><td colspan="5"></td>`;
     })();
 
     renderTable("actTable", FULL_ACT_TABLE, [
