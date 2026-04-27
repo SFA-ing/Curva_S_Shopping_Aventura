@@ -76,14 +76,12 @@ function convertExcelToGoogleSheet_(fileId) {
 
   const meta = Drive.Files.get(realId, {
     supportsAllDrives: true,
-    fields: 'id,title,mimeType,name'
+    fields: 'id,name,mimeType'
   });
-  const name = meta.title || meta.name || "ORIGEN";
+  const fileName = (meta.name || meta.title || "ORIGEN").replace(/\.(xlsx|xls)$/i, "") + " (ETL_TEMP)";
 
-  const resource = {
-    title: name.replace(/\.(xlsx|xls)$/i, "") + " (ETL_TEMP)",
-    mimeType: MimeType.GOOGLE_SHEETS
-  };
+  // Drive API v3: usa 'name'; v2 legacy usa 'title'. Soportamos ambos.
+  const resource = { name: fileName, title: fileName, mimeType: MimeType.GOOGLE_SHEETS };
 
   const newFile = Drive.Files.copy(resource, realId, {
     convert: true,
