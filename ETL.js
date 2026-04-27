@@ -76,7 +76,7 @@ function convertExcelToGoogleSheet_(fileId) {
 
   const meta = Drive.Files.get(realId, {
     supportsAllDrives: true,
-    fields: 'id,title,mimeType'
+    fields: 'id,title,mimeType,name'
   });
   const name = meta.title || meta.name || "ORIGEN";
 
@@ -97,11 +97,12 @@ function convertExcelToGoogleSheet_(fileId) {
  * Si el ID es un Shortcut (acceso directo), devuelve el targetId real.
  */
 function resolveShortcutId_(fileId) {
+  // Drive API v2 (GAS) usa sintaxis de fields sin paréntesis anidados
   const f = Drive.Files.get(fileId, {
     supportsAllDrives: true,
-    fields: 'id,mimeType,shortcutDetails(targetId,targetMimeType)'
+    fields: 'id,mimeType,shortcutDetails'
   });
-  const mime = f.mimeType || "";
+  const mime = (f && f.mimeType) || "";
 
   if (mime === "application/vnd.google-apps.shortcut") {
     const targetId = f.shortcutDetails && f.shortcutDetails.targetId;
