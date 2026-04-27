@@ -117,7 +117,18 @@
       margin-bottom:14px;
     }
 
-    /* ── KPI PANEL ── */
+    /* ── PANELES DESPLEGABLES ── */
+    .panel-toggle-header{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      cursor:pointer; user-select:none;
+    }
+    .panel-toggle-header:hover .panel-chevron{ color:#334155; }
+    .panel-chevron{
+      font-size:13px; color:#94a3b8; margin-top:2px; flex-shrink:0;
+      transition:transform .2s ease;
+    }
+    .panel.collapsed .panel-chevron{ transform:rotate(-90deg); }
+    .panel.collapsed .panel-body{ display:none; }
     .kpi-panel{ padding:16px; }
 
     .corte-badge{
@@ -564,43 +575,67 @@
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">Rendimientos por tarea y sector</div>
-        <div class="panel-sub">HH/unidad real vs teórico por etapa. Naranja = peor que el plan.</div>
-        <div class="tableWrap" style="overflow-x:auto;">
-          <table id="rendCruzTable"></table>
+      <div class="panel collapsed" id="panelRend">
+        <div class="panel-toggle-header" onclick="togglePanel('panelRend')">
+          <div>
+            <div class="panel-title">Rendimientos por tarea y sector</div>
+            <div class="panel-sub" style="margin-bottom:0;">HH/unidad real vs teórico por etapa. Naranja = peor que el plan.</div>
+          </div>
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div class="tableWrap" style="overflow-x:auto;">
+            <table id="rendCruzTable"></table>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title">Avance por Sistema y Tarea</div>
-        <div class="panel-sub">% avance físico real por sistema (etapa) para las 4 tareas clave.</div>
-        <div class="tableWrap" style="overflow-x:auto;">
-          <table id="sistemaTable"></table>
+      <div class="panel collapsed" id="panelSistema">
+        <div class="panel-toggle-header" onclick="togglePanel('panelSistema')">
+          <div>
+            <div class="panel-title">Avance por Sistema y Tarea</div>
+            <div class="panel-sub" style="margin-bottom:0;">% avance físico real por sistema para las 4 tareas clave.</div>
+          </div>
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div class="tableWrap" style="overflow-x:auto;">
+            <table id="sistemaTable"></table>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="headerRow">
+      <div class="panel collapsed" id="panelAct">
+        <div class="panel-toggle-header" onclick="togglePanel('panelAct')">
           <div>
             <div class="panel-title">Resumen por actividad (al corte)</div>
-            <div class="panel-sub" style="margin-bottom:0;">Click para filtrar tareas.</div>
+            <div class="panel-sub" style="margin-bottom:0;">Click en una fila para filtrar tareas.</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
             <span class="tag" id="filterTag">Filtro: Todas</span>
             <button class="miniBtn" onclick="clearActivityFilter()">Ver todas</button>
           </div>
-        </div>
-        <div class="tableWrap wrapAct">
-          <table id="actTable"></table>
+          <div class="tableWrap wrapAct">
+            <table id="actTable"></table>
+          </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-title" id="taskTitle">Análisis por tarea (al corte)</div>
-        <div class="panel-sub">Incluye ΔHH y Δ% (pp). Se resalta si Δ% (pp) &lt; 0.</div>
-        <div class="tableWrap wrapTask">
-          <table id="taskTable"></table>
+      <div class="panel collapsed" id="panelTask">
+        <div class="panel-toggle-header" onclick="togglePanel('panelTask')">
+          <div>
+            <div class="panel-title" id="taskTitle">Análisis por tarea (al corte)</div>
+            <div class="panel-sub" style="margin-bottom:0;">Incluye ΔHH y Δ% (pp). Se resalta si Δ% (pp) &lt; 0.</div>
+          </div>
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div class="tableWrap wrapTask">
+            <table id="taskTable"></table>
+          </div>
         </div>
       </div>
     </div>
@@ -1114,6 +1149,30 @@
     document.getElementById("taskTitle").textContent =
       SELECTED_ACT ? `Análisis por tarea — ${SELECTED_ACT}` : "Análisis por tarea (al corte)";
   }
+
+  // ── PANELES DESPLEGABLES ──
+  const COLLAPSIBLE_PANELS = ['panelRend','panelSistema','panelAct','panelTask'];
+
+  function togglePanel(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.toggle('collapsed');
+    try { localStorage.setItem('panel_'+id, el.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
+  }
+
+  function restorePanelStates(){
+    COLLAPSIBLE_PANELS.forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      try {
+        const saved = localStorage.getItem('panel_'+id);
+        if(saved === '0') el.classList.remove('collapsed');   // usuario lo abrió antes
+        else              el.classList.add('collapsed');       // cerrado por defecto
+      } catch(e){}
+    });
+  }
+
+  restorePanelStates();
 
   function wireActivitySelection(){
     const tbody=document.getElementById("actTable").querySelector("tbody");
