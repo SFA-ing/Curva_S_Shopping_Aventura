@@ -74,7 +74,10 @@ function ETL_actualizarTodo() {
 function convertExcelToGoogleSheet_(fileId) {
   const realId = resolveShortcutId_(fileId);
 
-  const meta = Drive.Files.get(realId, { supportsAllDrives: true });
+  const meta = Drive.Files.get(realId, {
+    supportsAllDrives: true,
+    fields: 'id,title,mimeType'
+  });
   const name = meta.title || meta.name || "ORIGEN";
 
   const resource = {
@@ -94,7 +97,10 @@ function convertExcelToGoogleSheet_(fileId) {
  * Si el ID es un Shortcut (acceso directo), devuelve el targetId real.
  */
 function resolveShortcutId_(fileId) {
-  const f = Drive.Files.get(fileId, { supportsAllDrives: true });
+  const f = Drive.Files.get(fileId, {
+    supportsAllDrives: true,
+    fields: 'id,mimeType,shortcutDetails(targetId,targetMimeType)'
+  });
   const mime = f.mimeType || "";
 
   if (mime === "application/vnd.google-apps.shortcut") {
