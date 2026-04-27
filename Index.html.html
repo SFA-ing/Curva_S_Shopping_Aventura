@@ -1166,7 +1166,7 @@
     FULL_TASK_TABLE=res.taskTable;
     FULL_ACT_TABLE=sortByHHRealDesc(res.activitySummary);
 
-    const stageSummary = res.stageSummary || [["ETAPA","m (corte / total)","HH (corte / total)","% Avance HH","% Avance Plan","% Avance Real","Rend. Plan / Real"]];
+    const stageSummary = res.stageSummary || [["ETAPA","m (corte / total)","HH (corte / total)","% Avance HH","% Avance Real","% Avance Plan","Rend. Real / Plan"]];
     const stageSorted = sortByHHRealDesc(stageSummary);
     renderTable("stageTable", stageSorted, [
       // Col 0: ETAPA
@@ -1177,21 +1177,21 @@
       x => { if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} / ${fmtNumber(x.t,0)} HH`; },
       // Col 3: % Avance HH
       x => x==null ? '-' : fmtPct(x, 1),
-      // Col 4: % Avance Plan
-      x => x==null ? '-' : fmtPct(x, 2),
-      // Col 5: % Avance Real  (verde si ≥ Plan, rojo si <)
+      // Col 4: % Avance Real (verde si ≥ Plan, rojo si <)
       (x, row) => {
         if(x==null) return '-';
-        const plan = row[4];
+        const plan = row[5];
         const cls = (plan==null || x >= plan) ? 'c-pos' : 'c-neg';
         return `<span class="${cls}">${fmtPct(x,2)}</span>`;
       },
-      // Col 6: Rend. Plan / Rend. Real
+      // Col 5: % Avance Plan
+      x => x==null ? '-' : fmtPct(x, 2),
+      // Col 6: Rend. Real / Plan
       x => {
         if(!x||typeof x!=='object') return '-';
-        const rp = x.plan!=null ? fmtNumber(x.plan,2)+' HH/m' : '-';
         const rr = x.real!=null ? fmtNumber(x.real,2)+' HH/m' : '-';
-        return `<span style="color:#475569">${rp}</span> / <span style="color:#0f172a">${rr}</span>`;
+        const rp = x.plan!=null ? fmtNumber(x.plan,2)+' HH/m' : '-';
+        return `<span style="color:#0f172a;font-weight:600">${rr}</span> / <span style="color:#475569">${rp}</span>`;
       },
     ]);
     // Fila de totales de cañería (metros)

@@ -506,7 +506,7 @@ function construirResumenPorEtapa_(shPlan, shHH, metrosByEtapa, taskMeta, denom,
   const stages = Object.keys(denom.byEtapa || {}).sort((a, b) => a.localeCompare(b));
 
   const rows = [];
-  rows.push(["ETAPA", "m (corte / total)", "HH (corte / total)", "% Avance HH", "% Avance Plan", "% Avance Real", "Rend. Plan / Real"]);
+  rows.push(["ETAPA", "m (corte / total)", "HH (corte / total)", "% Avance HH", "% Avance Real", "% Avance Plan", "Rend. Real / Plan"]);
 
   for (const etapa of stages) {
     const hhP = hhAcumGrupoHastaCorte_(hhPlanByWeekStage, etapa, cutMonday);
@@ -532,8 +532,8 @@ function construirResumenPorEtapa_(shPlan, shHH, metrosByEtapa, taskMeta, denom,
       metrosCell,
       hhCell,
       pctHH,
-      pctPlanEtapa,
       pctRealEtapa,
+      pctPlanEtapa,
       { plan: rendPlan, real: rendReal },
     ]);
   }
