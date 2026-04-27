@@ -332,20 +332,22 @@ function getDashboardData() {
     taskMeta, byTaskCut
   );
 
+  // Metros por etapa (clave eta||act||tar para evitar colisiones)
+  const metrosByEtapa = agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday);
+  let metrosTotalPlan = 0, metrosTotalReal = 0;
+  for (const mg of Object.values(metrosByEtapa)) {
+    metrosTotalPlan += mg.mTotal;
+    metrosTotalReal += mg.mReal;
+  }
+
   // Tablas
-  const stageSummary    = construirResumenPorEtapa_(shPlan, shHH, shQty, taskMeta, denom, byTaskCut, cutMonday);
+  const stageSummary    = construirResumenPorEtapa_(shPlan, shHH, metrosByEtapa, taskMeta, denom, byTaskCut, cutMonday);
   const activitySummary = construirResumenPorActividad_(shPlan, shHH, taskMeta, denom, byTaskCut, cutMonday);
   const taskTable       = construirTablaTareasV2_(shPlan, cutMonday, taskMeta, byTaskCut);
 
-  // Metros consolidados de cañería (unidad === "m") para barra de avance
-  let metrosTotalPlan = 0, metrosTotalReal = 0;
   // Total HH plan de TODAS las tareas (incluyendo las sin cantidad física)
   let hhTotalPlanExcel = 0;
-  for (const [k, m] of Object.entries(taskMeta)) {
-    if (String(m.unidad || "").trim().toLowerCase() === "m") {
-      metrosTotalPlan += Number(m.qtyPlan || 0);
-      metrosTotalReal += Number((byTaskCut[k] && byTaskCut[k].qtyReal) || 0);
-    }
+  for (const m of Object.values(taskMeta)) {
     hhTotalPlanExcel += Number(m.hhPlan || 0);
   }
 
@@ -465,7 +467,7 @@ function agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday) {
   return byEtapa;
 }
 
-function construirResumenPorEtapa_(shPlan, shHH, shQty, taskMeta, denom, byTaskCut, cutMonday) {
+function construirResumenPorEtapa_(shPlan, shHH, metrosByEtapa, taskMeta, denom, byTaskCut, cutMonday) {
   const hhPlanByWeekStage = sumaPorSemanaGrupo_(shPlan, "SEMANAS.WEEK_KEY", "ETAPA", "Avance HH");
   const hhRealByWeekStage = sumaPorSemanaGrupo_(shHH,   "SEMANAS.WEEK_KEY", "ETAPA", "Valor");
 
@@ -475,9 +477,6 @@ function construirResumenPorEtapa_(shPlan, shHH, shQty, taskMeta, denom, byTaskC
   for (const [k, v] of Object.entries(byTaskCut)) {
     qtyRealCutByTask[k] = Number(v.qtyReal || 0);
   }
-
-  // Metros por etapa con clave (eta||act||tar) para evitar colisiones de act+tar entre etapas
-  const metrosByEtapa = agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday);
 
   const stages = Object.keys(denom.byEtapa || {}).sort((a, b) => a.localeCompare(b));
 
