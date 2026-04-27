@@ -333,7 +333,7 @@ function getDashboardData() {
   );
 
   // Tablas
-  const stageSummary    = construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cutMonday);
+  const stageSummary    = construirResumenPorEtapa_(shPlan, shHH, shQty, taskMeta, denom, byTaskCut, cutMonday);
   const activitySummary = construirResumenPorActividad_(shPlan, shHH, taskMeta, denom, byTaskCut, cutMonday);
   const taskTable       = construirTablaTareasV2_(shPlan, cutMonday, taskMeta, byTaskCut);
 
@@ -393,7 +393,79 @@ function getDashboardData() {
 // ============================================================
 //  RESUMEN POR ETAPA (al corte)
 // ============================================================
-function construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cutMonday) {
+
+/**
+ * Suma metros (unidad="m") de plan y real por ETAPA usando clave
+ * (eta||act||tar) para evitar colisiones cuando mismo act+tar
+ * aparece en varias etapas.
+ */
+function agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday) {
+  // --- Plan ---
+  const vp = shPlan.getDataRange().getValues();
+  const hp = vp[0].map(String);
+  const ipEta = hp.indexOf("ETAPA");
+  const ipAct = hp.indexOf("ACTIVIDAD");
+  const ipTar = hp.indexOf("TAREA");
+  const ipQty = hp.indexOf("Cantidad Teórica");
+  const ipUni = hp.indexOf("Unidad");
+  const ipHH  = hp.indexOf("HH TOTALES");
+
+  const planByTask = {}; // "eta||act||tar" → { qtyPlan, hhPlan }
+  if (![ipEta, ipAct, ipTar, ipQty, ipUni].some(x => x === -1)) {
+    for (let r = 1; r < vp.length; r++) {
+      const uni = String(vp[r][ipUni] || "").trim().toLowerCase();
+      if (uni !== "m") continue;
+      const eta = normalizeKey_(vp[r][ipEta]);
+      const act = normalizeKey_(vp[r][ipAct]);
+      const tar = normalizeKey_(vp[r][ipTar]);
+      if (!eta || !act || !tar) continue;
+      const key = eta + "||" + act + "||" + tar;
+      const qty = toNumBack_(vp[r][ipQty]) || 0;
+      const hh  = (ipHH !== -1 ? toNumBack_(vp[r][ipHH]) : 0) || 0;
+      if (!planByTask[key]) planByTask[key] = { qtyPlan: 0, hhPlan: 0 };
+      // cada semana repite el total → usar max
+      if (qty > planByTask[key].qtyPlan) planByTask[key].qtyPlan = qty;
+      if (hh  > planByTask[key].hhPlan)  planByTask[key].hhPlan  = hh;
+    }
+  }
+
+  // --- Real (shQty = AVANCE_REAL_CANT) ---
+  const vq = shQty.getDataRange().getValues();
+  const hq = vq[0].map(String);
+  const iqWk  = hq.indexOf("SEMANAS.WEEK_KEY");
+  const iqEta = hq.indexOf("ETAPA");
+  const iqAct = hq.indexOf("ACTIVIDAD");
+  const iqTar = hq.indexOf("TAREA");
+  const iqVal = hq.indexOf("Valor");
+
+  const realByTask = {}; // "eta||act||tar" → qtyReal acum
+  if (![iqWk, iqEta, iqAct, iqTar, iqVal].some(x => x === -1)) {
+    for (let r = 1; r < vq.length; r++) {
+      const wk = String(vq[r][iqWk] || "").trim();
+      if (!wk || weekKeyToDate_(wk) > cutMonday) continue;
+      const eta = normalizeKey_(vq[r][iqEta]);
+      const act = normalizeKey_(vq[r][iqAct]);
+      const tar = normalizeKey_(vq[r][iqTar]);
+      if (!eta || !act || !tar) continue;
+      const key = eta + "||" + act + "||" + tar;
+      if (!planByTask[key]) continue; // solo tareas en metros
+      realByTask[key] = (realByTask[key] || 0) + Number(vq[r][iqVal] || 0);
+    }
+  }
+
+  // --- Agrupar por etapa ---
+  const byEtapa = {};
+  for (const [key, plan] of Object.entries(planByTask)) {
+    const eta = key.split("||")[0];
+    if (!byEtapa[eta]) byEtapa[eta] = { mTotal: 0, mReal: 0, hhPlan: 0, hhReal: 0 };
+    byEtapa[eta].mTotal += plan.qtyPlan;
+    byEtapa[eta].hhPlan += plan.hhPlan;
+    byEtapa[eta].mReal  += realByTask[key] || 0;
+  }
+  return byEtapa;
+}
+
+function construirResumenPorEtapa_(shPlan, shHH, shQty, taskMeta, denom, byTaskCut, cutMonday) {
   const hhPlanByWeekStage = sumaPorSemanaGrupo_(shPlan, "SEMANAS.WEEK_KEY", "ETAPA", "Avance HH");
   const hhRealByWeekStage = sumaPorSemanaGrupo_(shHH,   "SEMANAS.WEEK_KEY", "ETAPA", "Valor");
 
@@ -403,6 +475,9 @@ function construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cut
   for (const [k, v] of Object.entries(byTaskCut)) {
     qtyRealCutByTask[k] = Number(v.qtyReal || 0);
   }
+
+  // Metros por etapa con clave (eta||act||tar) para evitar colisiones de act+tar entre etapas
+  const metrosByEtapa = agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday);
 
   const stages = Object.keys(denom.byEtapa || {}).sort((a, b) => a.localeCompare(b));
 
@@ -417,21 +492,14 @@ function construirResumenPorEtapa_(shPlan, shHH, taskMeta, denom, byTaskCut, cut
     const pctPlanEtapa = denomEtapa > 0 ? pctFisicoGrupoDesdeQty_(taskMeta, "etapa", etapa, denomEtapa, qtyPlanCutByTask) : null;
     const pctRealEtapa = denomEtapa > 0 ? pctFisicoGrupoDesdeQty_(taskMeta, "etapa", etapa, denomEtapa, qtyRealCutByTask) : null;
 
-    // Metros (unidad === "m") y rendimientos para esta etapa
-    let mTotal  = 0;
-    let mReal   = 0;
-    let hhPlanM = 0;
-    let hhRealM = 0;
-    for (const [k, m] of Object.entries(taskMeta)) {
-      if (m.etapa !== etapa || String(m.unidad || "").trim().toLowerCase() !== "m") continue;
-      mTotal  += Number(m.qtyPlan || 0);
-      mReal   += Number(qtyRealCutByTask[k] || 0);
-      hhPlanM += Number(m.hhPlan || 0);
-      hhRealM += Number((byTaskCut[k] && byTaskCut[k].hhReal) || 0);
-    }
-    const metrosCell = mTotal  > 0 ? { r: mReal, t: mTotal } : null;
-    const rendPlan   = mTotal  > 0 ? hhPlanM / mTotal        : null;
-    const rendReal   = mReal   > 0 ? hhRealM / mReal         : null;
+    const mg      = metrosByEtapa[etapa] || { mTotal: 0, mReal: 0, hhPlan: 0, hhReal: 0 };
+    const mTotal  = mg.mTotal;
+    const mReal   = mg.mReal;
+    const hhPlanM = mg.hhPlan;
+    const hhRealM = mg.hhReal;
+    const metrosCell = mTotal > 0 ? { r: mReal, t: mTotal } : null;
+    const rendPlan   = mTotal > 0 ? hhPlanM / mTotal        : null;
+    const rendReal   = mReal  > 0 ? hhRealM / mReal         : null;
 
     rows.push([
       etapa,
