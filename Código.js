@@ -521,9 +521,9 @@ function construirResumenPorEtapa_(shPlan, shHH, metrosByEtapa, taskMeta, denom,
     const mReal   = mg.mReal;
     const hhPlanM = mg.hhPlan;
     const hhRealM = mg.hhReal;
-    const metrosCell = mTotal > 0 ? { r: mReal, t: mTotal } : null;
-    const hhCell     = hhP   > 0 ? { r: hhR,   t: hhP    } : null;
-    const pctHH      = hhP   > 0 ? hhR / hhP               : null;
+    const metrosCell = mTotal     > 0 ? { r: mReal, t: mTotal      } : null;
+    const hhCell     = denomEtapa > 0 ? { r: hhR,   t: denomEtapa  } : null;
+    const pctHH      = denomEtapa > 0 ? hhR / denomEtapa             : null;
     const rendPlan   = mTotal > 0 ? hhPlanM / mTotal        : null;
     const rendReal   = mReal  > 0 ? hhRealM / mReal         : null;
 
