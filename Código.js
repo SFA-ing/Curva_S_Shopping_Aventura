@@ -845,12 +845,12 @@ function construirTablaAvancePorSistema_(taskMeta, byTaskCut) {
     { key: "pruebas",    label: "Pruebas Hidráulicas",  re: /prueba/i   },
   ];
 
-  const sysMap = {}; // actividad (normalizada) → { label, slots }
+  const sysMap = {}; // actividad (normalizada) → { label, etapa, slots }
   for (const [k, m] of Object.entries(taskMeta)) {
     const col = COLS.find(c => c.re.test(m.tareaOrig || m.tarea));
     if (!col) continue;
     const sysKey = m.actividad;
-    if (!sysMap[sysKey]) sysMap[sysKey] = { label: m.actividadOrig || m.actividad, slots: {} };
+    if (!sysMap[sysKey]) sysMap[sysKey] = { label: m.actividadOrig || m.actividad, etapa: m.etapa, slots: {} };
     if (!sysMap[sysKey].slots[col.key]) sysMap[sysKey].slots[col.key] = { qtyPlan: 0, qtyReal: 0 };
     sysMap[sysKey].slots[col.key].qtyPlan += m.qtyPlan || 0;
     const cut = byTaskCut[k] || {};
@@ -859,7 +859,7 @@ function construirTablaAvancePorSistema_(taskMeta, byTaskCut) {
 
   const rows = Object.keys(sysMap).sort().map(sysKey => {
     const sys = sysMap[sysKey];
-    const row = { sistema: sys.label };
+    const row = { sistema: sys.label, etapa: sys.etapa };
     for (const col of COLS) {
       const slot = sys.slots[col.key];
       if (!slot || !(slot.qtyPlan > 0)) {

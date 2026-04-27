@@ -117,6 +117,11 @@
       margin-bottom:14px;
     }
 
+    /* ── STAGE TABLE: filas clicables ── */
+    #stageTable tbody tr{ cursor:pointer; transition:background .1s; }
+    #stageTable tbody tr:hover{ background:#f8fafc; }
+    #stageTable tbody tr.selected{ background:#eff6ff; outline:2px solid #3b82f6; outline-offset:-2px; }
+
     /* ── PANELES DESPLEGABLES ── */
     .panel-toggle-header{
       display:flex; align-items:flex-start; justify-content:space-between;
@@ -1081,18 +1086,19 @@
   }
 
   /* ── TABLES ── */
-  function renderTable(tableId, rows, formatters, rowClassFn){
+  function renderTable(tableId, rows, formatters, rowClassFn, rowAttrFn){
     const table=document.getElementById(tableId);
     const header=rows[0];
     const body=rows.slice(1);
     const th=header.map(h=>`<th>${h}</th>`).join("");
     const tr=body.map((row,ridx)=>{
       const cls=rowClassFn?(rowClassFn(row,ridx)||""):"";
+      const attrs=rowAttrFn?(rowAttrFn(row,ridx)||""):"";
       const tds=row.map((cell,idx)=>{
         const f=formatters?.[idx];
         return `<td>${f?f(cell,row):(cell??"-")}</td>`;
       }).join("");
-      return `<tr class="${cls}">${tds}</tr>`;
+      return `<tr class="${cls}" ${attrs}>${tds}</tr>`;
     }).join("");
     table.innerHTML=`<thead><tr>${th}</tr></thead><tbody>${tr}</tbody>`;
   }
@@ -1252,7 +1258,8 @@
         const rp = x.plan!=null ? fmtNumber(x.plan,2)+' HH/m' : '-';
         return `<span style="color:#0f172a;font-weight:600">${rr}</span> / <span style="color:#475569">${rp}</span>`;
       },
-    ]);
+    ], null, (row) => `data-etapa="${(row[0]||'').replace(/"/g,'&quot;')}"`);
+    wireStageTableClick();
     // Fila de totales de cañería (metros)
     (function(){
       let mT=0, mR=0, has=false;
@@ -1281,20 +1288,30 @@
     renderAvancePorSistema(res.avancePorSistema);
   }
 
-  function renderAvancePorSistema(data) {
+  let SISTEMA_DATA = null;
+  let selectedStageEtapa = null;
+
+  function renderAvancePorSistema(data, filterEtapa) {
     const el = document.getElementById("sistemaTable");
     if (!data || !data.rows || !data.cols) { el.innerHTML = ''; return; }
+    SISTEMA_DATA = data;
     const cols = data.cols;
+    const rows = filterEtapa
+      ? data.rows.filter(r => r.etapa === filterEtapa)
+      : data.rows;
 
     // Cabecera
+    const filterLabel = filterEtapa
+      ? ` <span style="font-weight:400;color:#64748b;font-size:11px;">— ${filterEtapa}</span>`
+      : '';
     const thead = `<tr>
-      <th>Sistema</th>
+      <th>Sistema${filterLabel}</th>
       ${cols.map(c => `<th>${c.label}</th>`).join('')}
     </tr>`;
 
     // Filas
     let tbody = '';
-    for (const row of data.rows) {
+    for (const row of rows) {
       let tds = '';
       for (const col of cols) {
         const v = row[col.key];
@@ -1316,6 +1333,34 @@
     }
 
     el.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
+  }
+
+  function wireStageTableClick() {
+    const tbl = document.getElementById("stageTable");
+    if (!tbl) return;
+    const tbody = tbl.querySelector("tbody");
+    if (!tbody) return;
+    tbody.querySelectorAll("tr").forEach(tr => {
+      tr.style.cursor = "pointer";
+      tr.addEventListener("click", () => {
+        const isSelected = tr.classList.contains("selected");
+        tbody.querySelectorAll("tr").forEach(r => r.classList.remove("selected"));
+        if (isSelected) {
+          // deseleccionar → mostrar todos
+          selectedStageEtapa = null;
+          renderAvancePorSistema(SISTEMA_DATA, null);
+        } else {
+          tr.classList.add("selected");
+          // col 0 = etapa label, pero necesitamos la clave normalizada
+          // la guardamos en data-etapa al renderizar
+          selectedStageEtapa = tr.dataset.etapa || null;
+          renderAvancePorSistema(SISTEMA_DATA, selectedStageEtapa);
+          // abrir panel si está colapsado
+          const panel = document.getElementById("panelSistema");
+          if (panel && panel.classList.contains("collapsed")) togglePanel("panelSistema");
+        }
+      });
+    });
   }
 
   function renderRendimientosCruzados(data){
