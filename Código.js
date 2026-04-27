@@ -333,7 +333,7 @@ function getDashboardData() {
   );
 
   // Metros por etapa (clave eta||act||tar para evitar colisiones)
-  const metrosByEtapa = agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday);
+  const metrosByEtapa = agrupacionMetrosPorEtapa_(shPlan, shQty, shHH, cutMonday);
   let metrosTotalPlan = 0, metrosTotalReal = 0;
   for (const mg of Object.values(metrosByEtapa)) {
     metrosTotalPlan += mg.mTotal;
@@ -401,7 +401,7 @@ function getDashboardData() {
  * (eta||act||tar) para evitar colisiones cuando mismo act+tar
  * aparece en varias etapas.
  */
-function agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday) {
+function agrupacionMetrosPorEtapa_(shPlan, shQty, shHH, cutMonday) {
   // --- Plan ---
   const vp = shPlan.getDataRange().getValues();
   const hp = vp[0].map(String);
@@ -431,7 +431,7 @@ function agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday) {
     }
   }
 
-  // --- Real (shQty = AVANCE_REAL_CANT) ---
+  // --- Real cantidad (shQty = AVANCE_REAL_CANT) ---
   const vq = shQty.getDataRange().getValues();
   const hq = vq[0].map(String);
   const iqWk  = hq.indexOf("SEMANAS.WEEK_KEY");
@@ -440,7 +440,7 @@ function agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday) {
   const iqTar = hq.indexOf("TAREA");
   const iqVal = hq.indexOf("Valor");
 
-  const realByTask = {}; // "eta||act||tar" → qtyReal acum
+  const realQtyByTask = {}; // "eta||act||tar" → qtyReal acum
   if (![iqWk, iqEta, iqAct, iqTar, iqVal].some(x => x === -1)) {
     for (let r = 1; r < vq.length; r++) {
       const wk = String(vq[r][iqWk] || "").trim();
@@ -451,7 +451,31 @@ function agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday) {
       if (!eta || !act || !tar) continue;
       const key = eta + "||" + act + "||" + tar;
       if (!planByTask[key]) continue; // solo tareas en metros
-      realByTask[key] = (realByTask[key] || 0) + Number(vq[r][iqVal] || 0);
+      realQtyByTask[key] = (realQtyByTask[key] || 0) + Number(vq[r][iqVal] || 0);
+    }
+  }
+
+  // --- Real HH (shHH = AVANCE_REAL_HH) ---
+  const vh = shHH.getDataRange().getValues();
+  const hh = vh[0].map(String);
+  const ihWk  = hh.indexOf("SEMANAS.WEEK_KEY");
+  const ihEta = hh.indexOf("ETAPA");
+  const ihAct = hh.indexOf("ACTIVIDAD");
+  const ihTar = hh.indexOf("TAREA");
+  const ihVal = hh.indexOf("Valor");
+
+  const realHHByTask = {}; // "eta||act||tar" → hhReal acum
+  if (![ihWk, ihEta, ihAct, ihTar, ihVal].some(x => x === -1)) {
+    for (let r = 1; r < vh.length; r++) {
+      const wk = String(vh[r][ihWk] || "").trim();
+      if (!wk || weekKeyToDate_(wk) > cutMonday) continue;
+      const eta = normalizeKey_(vh[r][ihEta]);
+      const act = normalizeKey_(vh[r][ihAct]);
+      const tar = normalizeKey_(vh[r][ihTar]);
+      if (!eta || !act || !tar) continue;
+      const key = eta + "||" + act + "||" + tar;
+      if (!planByTask[key]) continue; // solo tareas en metros
+      realHHByTask[key] = (realHHByTask[key] || 0) + Number(vh[r][ihVal] || 0);
     }
   }
 
@@ -462,7 +486,8 @@ function agrupacionMetrosPorEtapa_(shPlan, shQty, cutMonday) {
     if (!byEtapa[eta]) byEtapa[eta] = { mTotal: 0, mReal: 0, hhPlan: 0, hhReal: 0 };
     byEtapa[eta].mTotal += plan.qtyPlan;
     byEtapa[eta].hhPlan += plan.hhPlan;
-    byEtapa[eta].mReal  += realByTask[key] || 0;
+    byEtapa[eta].mReal  += realQtyByTask[key] || 0;
+    byEtapa[eta].hhReal += realHHByTask[key]  || 0;
   }
   return byEtapa;
 }
