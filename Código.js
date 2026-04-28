@@ -25,9 +25,8 @@ function doGet() {
 var CACHE_SHEET_ID = '1ijIAkVvTYYkgcKOTH8RNpgox6bN4-fvNcROAo84CFw0';
 var CACHE_SHEET_NAME = 'data';
 
-// CAMBIAR EN CADA REPORTE
+// Las constantes de configuración viven en Config.js.
 var DASHBOARD_KEY = 'aventura_shopping';
-var REPORTE_FISICO_URL = 'https://script.google.com/a/macros/ingener.com/s/AKfycbxK8UUzaeZ4H3ke1_ZzKRXzyzkm88a5-MkZkRmVqkgAOJyJvEkVQhl2Lj-caDdPI3tQ5A/exec';
 
 function actualizarManualmente() {
   ETL_actualizarTodo();
@@ -137,9 +136,9 @@ function onOpen() {
 function getDashboardData() {
   const ss = SpreadsheetApp.getActive();
 
-  const shPlan = ss.getSheetByName("Planificación Inicial");
-  const shHH   = ss.getSheetByName("AVANCE_HH_REAL (2)");
-  const shQty  = ss.getSheetByName("AVANCE_REAL_CANT (2)");
+  const shPlan = ss.getSheetByName(DEST_PLAN_SHEET_NAME);
+  const shHH   = ss.getSheetByName(DEST_REAL_HH_SHEET_NAME);
+  const shQty  = ss.getSheetByName(DEST_REAL_CANT_SHEET_NAME);
 
   if (!shPlan || !shHH || !shQty) {
     throw new Error('Faltan hojas. Deben existir: "Planificación Inicial", "AVANCE_HH_REAL (2)", "AVANCE_REAL_CANT (2)".');
@@ -370,7 +369,8 @@ function getDashboardData() {
     metrosTotalPlan,
     metrosTotalReal,
     hhTotalPlanExcel,
-    hhPlanAcFinal
+    hhPlanAcFinal,
+    mainUnit: MAIN_UNIT   // etiquetas del proyecto para el frontend
   };
 
   return {
@@ -416,7 +416,7 @@ function agrupacionMetrosPorEtapa_(shPlan, shQty, shHH, cutMonday) {
   if (![ipEta, ipAct, ipTar, ipQty, ipUni].some(x => x === -1)) {
     for (let r = 1; r < vp.length; r++) {
       const uni = String(vp[r][ipUni] || "").trim().toLowerCase();
-      if (uni !== "m") continue;
+      if (uni !== MAIN_UNIT.unit) continue;
       const eta = normalizeKey_(vp[r][ipEta]);
       const act = normalizeKey_(vp[r][ipAct]);
       const tar = normalizeKey_(vp[r][ipTar]);
@@ -838,12 +838,7 @@ function construirTablaRendimientosCruzados_(taskMeta, byTaskCut) {
 //  TABLA: Avance por Sistema × Tarea (4 tareas clave)
 // ============================================================
 function construirTablaAvancePorSistema_(taskMeta, byTaskCut) {
-  const COLS = [
-    { key: "colectores", label: "Montaje Colectores",  re: /colector/i },
-    { key: "espinas",    label: "Montaje Espinas",      re: /espina/i   },
-    { key: "bies",       label: "Montaje BIEs",         re: /\bbies?\b/i },
-    { key: "pruebas",    label: "Pruebas Hidráulicas",  re: /prueba/i   },
-  ];
+  const COLS = KEY_TASKS; // definido en Config.js
 
   const sysMap = {}; // actividad (normalizada) → { label, etapa, slots }
   for (const [k, m] of Object.entries(taskMeta)) {

@@ -731,18 +731,18 @@
       <div class="bar-item">
         <div class="bar-header">
           <div class="bar-label">
-            <div class="bar-icon" style="background:#e0f2fe;color:#0369a1;">〰</div>
+            <div class="bar-icon" style="background:${(k.mainUnit&&k.mainUnit.kpiBg)||'#e0f2fe'};color:${(k.mainUnit&&k.mainUnit.kpiColor)||'#0369a1'};">${(k.mainUnit&&k.mainUnit.kpiIcon)||'〰'}</div>
             <div>
-              <div>AVANCE METROS DE CAÑERÍA</div>
-              <div class="bar-desc">${fmtNumber(mReal,0)} m instalados de ${fmtNumber(mPlan,0)} m totales</div>
+              <div>${(k.mainUnit&&k.mainUnit.kpiTitle)||'AVANCE METROS DE CAÑERÍA'}</div>
+              <div class="bar-desc">${fmtNumber(mReal,0)} ${(k.mainUnit&&k.mainUnit.unitLabel)||'m'} instalados de ${fmtNumber(mPlan,0)} ${(k.mainUnit&&k.mainUnit.unitLabel)||'m'} totales</div>
             </div>
           </div>
-          <div class="bar-pct" style="color:#0369a1;">
+          <div class="bar-pct" style="color:${(k.mainUnit&&k.mainUnit.kpiColor)||'#0369a1'};">
             ${fmtPctPlain(pctM,1)}%
           </div>
         </div>
         <div class="bar-track">
-          <div class="bar-fill" style="width:${Math.min(100,pctM*100).toFixed(2)}%;background:#0369a1;"></div>
+          <div class="bar-fill" style="width:${Math.min(100,pctM*100).toFixed(2)}%;background:${(k.mainUnit&&k.mainUnit.kpiColor)||'#0369a1'};"></div>
         </div>
       </div>`:''}
     `;

@@ -1,16 +1,7 @@
 /***************
- * CONFIG
+ * Las constantes de configuración viven en Config.js.
+ * Este archivo solo contiene la lógica de transformación.
  ***************/
-const SOURCE_EXCEL_FOLDER_ID = "1kfw0tC3QWJr6hCSZ0AJQN49PKzFLcafC"; // Carpeta en Drive con el Excel origen
-const DEST_PLAN_SHEET_NAME      = "Planificación Inicial";
-const DEST_REAL_CANT_SHEET_NAME = "AVANCE_REAL_CANT (2)";
-const DEST_REAL_HH_SHEET_NAME   = "AVANCE_HH_REAL (2)";
-
-// Hojas dentro del Excel convertido
-const SRC_SHEET_SEMANAS  = "SEMANAS";
-const SRC_SHEET_PLAN_LB  = "PLANIFICACIÓN LB";
-const SRC_SHEET_REAL_CANT = "AVANCE_REAL_CANT";
-const SRC_SHEET_REAL_HH   = "AVANCE_HH_REAL";
 
 /**
  * ETL end-to-end:
