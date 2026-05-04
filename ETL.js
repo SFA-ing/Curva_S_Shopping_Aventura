@@ -65,10 +65,8 @@ function ETL_actualizarTodo() {
 function convertExcelToGoogleSheet_(fileId) {
   const realId = resolveShortcutId_(fileId);
 
-  const meta = Drive.Files.get(realId, {
-    supportsAllDrives: true,
-    fields: 'id,name,mimeType'
-  });
+  // Sin 'fields' para compatibilidad con Drive API v2 (title) y v3 (name)
+  const meta = Drive.Files.get(realId, { supportsAllDrives: true });
   const fileName = (meta.name || meta.title || "ORIGEN").replace(/\.(xlsx|xls)$/i, "") + " (ETL_TEMP)";
 
   // Drive API v3: usa 'name'; v2 legacy usa 'title'. Soportamos ambos.
