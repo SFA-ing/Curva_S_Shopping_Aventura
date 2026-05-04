@@ -1,0 +1,1551 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Reporte Avance Físico</title>
+
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f0f2f7;
+      --card:#ffffff;
+      --muted:#8492a6;
+      --border:#e2e8f0;
+      --ok-bg:#edfaf4;
+      --ok-text:#1a7f4b;
+      --bad-bg:#fff1f0;
+      --bad-text:#d63031;
+      --info-bg:#eff6ff;
+      --soft:#f8fafc;
+      --sel:#fff7cc;
+
+      --blue:#2563eb;
+      --orange:#f97316;
+      --green:#16a34a;
+      --red:#dc2626;
+      --yellow:#d97706;
+
+      --bar-plan: #2563eb;
+      --bar-real-good: #16a34a;
+      --bar-real-bad: #f97316;
+    }
+
+    *{ box-sizing:border-box; margin:0; padding:0; }
+
+    body{
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: #1e293b;
+    }
+
+    /* ── TOPBAR ── */
+    .topbar{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:14px 20px;
+      border-bottom:1px solid var(--border);
+      background:#fff;
+      position:sticky;
+      top:0;
+      z-index:20;
+    }
+    .topbar-logo{
+      width:32px; height:32px;
+      background: linear-gradient(135deg, var(--blue), #7c3aed);
+      border-radius:8px;
+      display:flex; align-items:center; justify-content:center;
+      color:#fff; font-weight:900; font-size:14px;
+    }
+    .topbar h1{ font-size:15px; font-weight:700; letter-spacing:-.3px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .topbar-meta{ font-size:12px; color:var(--muted); margin-left:4px; white-space:nowrap; flex-shrink:0; }
+    .btn{
+      margin-left:0;
+      flex-shrink:0;
+      border:1px solid var(--border);
+      background:#fff;
+      padding:8px 16px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:13px;
+      font-family: inherit;
+      transition: background .15s;
+    }
+    .btn:hover{ background: var(--soft); }
+    .btn:disabled{ opacity:.5; cursor:not-allowed; }
+    .btn-primary{
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+    }
+    .btn-primary:hover{ background: #1d4ed8; }
+    .btn-primary:disabled{ opacity:.5; cursor:not-allowed; }
+
+    /* ── LAYOUT ── */
+    .grid{
+      display:grid;
+      grid-template-columns: minmax(300px, 400px) minmax(0, 1fr);
+      gap:16px;
+      padding:16px;
+      max-width:1900px;
+      margin:0 auto;
+      align-items:start;
+    }
+    .leftCol{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+    .rightCol{ display:flex; flex-direction:column; gap:14px; min-width:0; }
+
+    .panel{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:16px;
+    }
+    .panel-title{
+      font-size:13px;
+      font-weight:700;
+      color:#1e293b;
+      margin-bottom:4px;
+      letter-spacing:-.2px;
+    }
+    .panel-sub{
+      font-size:11px;
+      color:var(--muted);
+      margin-bottom:14px;
+    }
+
+    /* ── STAGE TABLE: filas clicables ── */
+    #stageTable tbody tr{ cursor:pointer; transition:background .1s; }
+    #stageTable tbody tr:hover{ background:#f8fafc; }
+    #stageTable tbody tr.selected{ background:#eff6ff; outline:2px solid #3b82f6; outline-offset:-2px; }
+
+    /* ── PANELES DESPLEGABLES ── */
+    .panel-toggle-header{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      cursor:pointer; user-select:none;
+    }
+    .panel-toggle-header:hover .panel-chevron{ color:#334155; }
+    .panel-chevron{
+      font-size:13px; color:#94a3b8; margin-top:2px; flex-shrink:0;
+      transition:transform .2s ease;
+    }
+    .panel.collapsed .panel-chevron{ transform:rotate(-90deg); }
+    .panel.collapsed .panel-body{ display:none; }
+    .kpi-panel{ padding:16px; }
+
+    .corte-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      color:var(--muted);
+      background: var(--soft);
+      border:1px solid var(--border);
+      padding:4px 10px;
+      border-radius:999px;
+      margin-bottom:14px;
+    }
+    .corte-dot{
+      width:6px; height:6px;
+      border-radius:50%;
+      background: var(--green);
+    }
+
+    /* ── PROGRESS BARS SUMMARY ── */
+    .summary-bars{ display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+
+    .bar-item{ display:flex; flex-direction:column; gap:5px; }
+    .bar-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .bar-label{
+      display:flex;
+      align-items:center;
+      gap:7px;
+      font-size:12px;
+      font-weight:600;
+      color:#334155;
+    }
+    .bar-icon{
+      width:20px; height:20px;
+      border-radius:6px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:11px;
+    }
+    .bar-icon.blue{ background:#dbeafe; color:var(--blue); }
+    .bar-icon.orange{ background:#ffedd5; color:var(--orange); }
+    .bar-pct{
+      font-size:18px;
+      font-weight:900;
+      font-family: 'DM Mono', monospace;
+      letter-spacing:-.5px;
+    }
+    .bar-desc{ font-size:10px; color:var(--muted); }
+
+    .bar-track{
+      height:8px;
+      background:#e2e8f0;
+      border-radius:999px;
+      overflow:hidden;
+      position:relative;
+    }
+    .bar-fill{
+      height:100%;
+      border-radius:999px;
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+    }
+    .bar-fill.blue{ background: linear-gradient(90deg, #3b82f6, #2563eb); }
+    .bar-fill.orange{ background: linear-gradient(90deg, #fb923c, #f97316); }
+
+    /* Marcador de plan en la barra */
+    .bar-track-wrap{ position:relative; }
+    .bar-marker{
+      position:absolute;
+      top:-3px;
+      width:2px;
+      height:14px;
+      background:#94a3b8;
+      border-radius:1px;
+      transform:translateX(-50%);
+    }
+
+    /* ── ALERTA ── */
+    .alert-box{
+      display:flex;
+      align-items:flex-start;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:10px;
+      font-size:11.5px;
+      line-height:1.5;
+      margin-bottom:0;
+    }
+    .alert-box.bad{
+      background:var(--bad-bg);
+      border:1px solid #fecaca;
+    }
+    .alert-box.ok{
+      background:var(--ok-bg);
+      border:1px solid #bbf7d0;
+    }
+    .alert-box.neutral{
+      background:#f8fafc;
+      border:1px solid var(--border);
+    }
+    .alert-icon{ font-size:16px; flex-shrink:0; margin-top:1px; }
+    .alert-title{ font-weight:700; margin-bottom:2px; }
+    .alert-desc{ color:#64748b; }
+
+    /* ── SECCIÓN KPI ── */
+    .kpi-section{ margin-top:14px; }
+    .kpi-section-header{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:10px;
+      padding-bottom:8px;
+      border-bottom:1px solid var(--border);
+    }
+    .kpi-section-icon{
+      width:24px; height:24px;
+      border-radius:7px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px;
+    }
+    .kpi-section-icon.blue{ background:#dbeafe; }
+    .kpi-section-icon.amber{ background:#fef3c7; }
+    .kpi-section-title{
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.6px;
+      color:#475569;
+    }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:8px;
+    }
+
+    .kpi{
+      border-radius:12px;
+      padding:10px 12px;
+      background: var(--soft);
+      border:1px solid var(--border);
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .kpi .v{
+      font-size:16px;
+      font-weight:900;
+      font-family: 'DM Mono', monospace;
+      letter-spacing:-.5px;
+      line-height:1.2;
+      white-space:normal;
+      word-break:break-all;
+    }
+    .kpi .v .unit{
+      font-size:11px;
+      font-weight:600;
+      font-family: 'DM Sans', sans-serif;
+      color:var(--muted);
+      margin-left:2px;
+    }
+    .kpi .t{
+      font-size:10px;
+      font-weight:600;
+      color:var(--muted);
+      line-height:1.3;
+    }
+
+    /* colores semánticos */
+    .c-pos{ color: var(--green); }
+    .c-neg{ color: var(--red); }
+    .c-neu{ color: #1e293b; }
+    .c-blue{ color: var(--blue); }
+    .c-orange{ color: var(--orange); }
+
+    /* KPI highlight (el central de desfase) */
+    .kpi.highlight-bad{ background:var(--bad-bg); border-color:#fecaca; }
+    .kpi.highlight-ok { background:var(--ok-bg);  border-color:#bbf7d0; }
+
+    /* ── CHARTS ── */
+    .chartBox{
+      width:100%; height:46vh;
+      min-height:360px; max-height:560px;
+    }
+    .chartBoxSm{
+      width:100%; height:26vh;
+      min-height:200px; max-height:320px;
+    }
+
+    /* ── TABLES ── */
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    th, td{ padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:middle; }
+    th{
+      text-align:left;
+      background:var(--soft);
+      font-size:11px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.4px;
+      color:var(--muted);
+      position:sticky; top:0; z-index:1;
+    }
+    .tableWrap{
+      overflow:auto;
+      border:1px solid var(--border);
+      border-radius:12px;
+    }
+    .wrapAct{ max-height:220px; }
+    .wrapTask{ max-height:400px; }
+
+    #actTable tbody tr{ cursor:pointer; transition: background .1s; }
+    #actTable tbody tr:hover{ background:#f8fafc; }
+    #actTable tbody tr.selected{ background:var(--sel); }
+    #taskTable tbody tr.delay{ background:var(--bad-bg); }
+
+    /* Tabla rendimientos cruzados */
+    #rendCruzTable th.group-real    { background:#fef3c7; color:#92400e; text-align:center; }
+    #rendCruzTable th.group-teo     { background:#dbeafe; color:#1e40af; text-align:center; }
+    #rendCruzTable th.sub           { font-weight:600; font-size:11px; text-align:center; background:var(--soft); }
+    #rendCruzTable td.rend-cell     { text-align:center; font-family:'DM Mono',monospace; font-size:12px; }
+    #rendCruzTable td.rend-null     { background:#e2e8f0; }
+    #rendCruzTable td.rend-bad      { background:#fee2e2; color:var(--red); font-weight:700; }
+    #rendCruzTable td.rend-good     { color:var(--green); }
+    #rendCruzTable td.rend-teo      { text-align:center; font-size:12px; color:#475569; }
+
+    /* Avance por Sistema y Tarea */
+    #sistemaTable th               { background:var(--soft); font-size:11px; font-weight:700; text-align:center; padding:6px 10px; white-space:nowrap; }
+    #sistemaTable th:first-child   { text-align:left; }
+    #sistemaTable td               { font-size:12px; padding:4px 6px; text-align:center; vertical-align:middle; }
+    #sistemaTable td:first-child   { text-align:left; font-weight:600; font-size:12px; white-space:nowrap; }
+    #sistemaTable td.sys-na        { background:#e2e8f0; }
+    #sistemaTable td.sys-done      { background:#dcfce7; color:#166534; font-weight:700; }
+    #sistemaTable td.sys-high      { background:#d1fae5; color:#065f46; }
+    #sistemaTable td.sys-mid       { background:#fef9c3; color:#854d0e; }
+    #sistemaTable td.sys-low       { background:#fee2e2; color:#991b1b; }
+    #sistemaTable td.sys-zero      { background:#fef2f2; color:#dc2626; }
+    #sistemaTable .sys-bar-wrap    { display:flex; align-items:center; gap:5px; justify-content:center; }
+    #sistemaTable .sys-bar         { height:8px; background:#94a3b8; border-radius:4px; flex:1; min-width:40px; position:relative; }
+    #sistemaTable .sys-bar-fill    { height:100%; border-radius:4px; transition:width .3s; }
+    #rendCruzTable td.teo-null      { background:#e2e8f0; }
+    #rendCruzTable th:first-child,
+    #rendCruzTable td:first-child   { font-weight:600; min-width:180px; }
+
+    .headerRow{
+      display:flex; align-items:flex-end;
+      justify-content:space-between;
+      gap:12px; margin-bottom:8px; flex-wrap:wrap;
+    }
+    .miniBtn{
+      border:1px solid var(--border);
+      background:#fff; padding:5px 10px;
+      border-radius:8px; cursor:pointer;
+      font-weight:700; font-size:11px;
+      font-family:inherit;
+    }
+    .tag{
+      font-size:11px; color:var(--muted);
+      padding:4px 8px; border:1px solid var(--border);
+      border-radius:999px; background:#fff;
+    }
+
+    .scenarioBtn{
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 5px 11px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 11.5px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #475569;
+      transition: all .15s;
+    }
+    .scenarioBtn:hover{ background: var(--soft); }
+    .scenarioBtn.active{
+      background: #1e293b;
+      color: #fff;
+      border-color: #1e293b;
+    }
+    .scenario-info-box{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 14px;
+      border-radius: 10px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .scenario-info-box.escA{ background:#eff6ff; border:1px solid #bfdbfe; }
+    .scenario-info-box.escB{ background:#fef3c7; border:1px solid #fcd34d; }
+    .scenario-stat{
+      display:flex; flex-direction:column; gap:1px;
+    }
+    .scenario-stat .sv{ font-size:15px; font-weight:900; }
+    .scenario-stat .sl{ font-size:10px; color:var(--muted); font-weight:600; }
+
+    .foot{
+      padding:0 16px 20px;
+      color:var(--muted);
+      font-size:11px;
+      max-width:1900px;
+      margin:0 auto;
+    }
+
+    /* ── RESPONSIVE ── */
+
+    /* Laptop estrecho */
+    @media(max-width:1200px){
+      .grid{ grid-template-columns: minmax(280px,360px) minmax(0,1fr); }
+    }
+    /* Tablet landscape / laptop pequeño → una sola columna */
+    @media(max-width:960px){
+      .grid{ grid-template-columns: 1fr; }
+      .chartBox{ height:45vh; min-height:280px; }
+    }
+    /* Tablet portrait */
+    @media(max-width:768px){
+      .topbar-meta{ display:none; }
+      .grid{ padding:10px; gap:10px; }
+      .panel{ padding:12px; }
+      .chartBox{ height:40vh; min-height:260px; }
+      .chartBoxSm{ height:26vh; min-height:160px; }
+      th, td{ padding:6px 8px; font-size:11px; }
+    }
+    /* Mobile grande */
+    @media(max-width:600px){
+      .topbar{ padding:10px 12px; gap:8px; flex-wrap:wrap; }
+      .topbar h1{ font-size:13px; order:2; flex-basis:100%; }
+      .topbar-logo{ order:1; }
+      .btn{ order:3; padding:6px 10px; font-size:12px; }
+      .grid{ padding:8px; gap:8px; }
+      .panel{ border-radius:12px; padding:10px; }
+      .chartBox{ height:50vw; min-height:220px; max-height:380px; }
+      .chartBoxSm{ height:38vw; min-height:150px; max-height:240px; }
+      .kpi .v{ font-size:14px; }
+    }
+    /* Mobile chico */
+    @media(max-width:400px){
+      .topbar h1{ font-size:12px; }
+      .btn{ font-size:11px; padding:5px 8px; }
+      .kpi-grid{ grid-template-columns:repeat(2,1fr); }
+      th, td{ font-size:10px; padding:5px 6px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="topbar-logo">M</div>
+    <h1 id="projectTitle">Reporte Avance Físico</h1>
+    <div class="topbar-meta" id="meta"></div>
+    <button class="btn btn-primary" id="btnImport" onclick="importarDatos()">Importar datos</button>
+    <button class="btn" id="btnRefresh" onclick="load()">Actualizar</button>
+  </div>
+
+  <div class="grid">
+    <!-- ══ LEFT ══ -->
+    <div class="leftCol">
+
+      <!-- KPI PANEL -->
+      <div class="panel kpi-panel">
+        <div class="corte-badge">
+          <span class="corte-dot"></span>
+          <span id="corte">Cargando…</span>
+        </div>
+
+        <!-- Barras resumen -->
+        <div class="summary-bars" id="summaryBars">
+          <!-- se llena por JS -->
+        </div>
+
+        <!-- Alerta -->
+        <div id="alertBox"></div>
+
+        <!-- ── Avance Físico ── -->
+        <div class="kpi-section">
+          <div class="kpi-section-header">
+            <div class="kpi-section-icon blue">📐</div>
+            <div class="kpi-section-title">Avance Físico</div>
+          </div>
+          <div class="kpi-grid" id="kpisAvance"></div>
+        </div>
+
+        <!-- ── Horas Hombre ── -->
+        <div class="kpi-section" style="margin-top:14px;">
+          <div class="kpi-section-header">
+            <div class="kpi-section-icon amber">⏱</div>
+            <div class="kpi-section-title">Horas Hombre</div>
+          </div>
+          <div class="kpi-grid" id="kpisHH"></div>
+        </div>
+      </div>
+
+      <!-- Tendencia -->
+      <div class="panel">
+        <div class="panel-title">Tendencia últimas 6 semanas</div>
+        <div class="panel-sub">Plan vs Real — % físico acumulado</div>
+        <div id="trendChart" class="chartBoxSm"></div>
+      </div>
+
+      <!-- Notas -->
+      <div class="panel">
+        <div class="panel-title" style="margin-bottom:6px;">Notas</div>
+        <div style="font-size:11.5px; color:#64748b; line-height:1.7;">
+          • El corte REAL considera información hasta la semana pasada (lunes).<br/>
+          • "HH Prev. por Avance" interpola HH plan según % físico real alcanzado.<br/>
+          • En tareas: Δ% (pp) &lt; 0 se marca como atraso.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ RIGHT ══ -->
+    <div class="rightCol">
+      <div class="panel">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+          <div>
+            <div class="panel-title">Curva S</div>
+            <div class="panel-sub" style="margin-bottom:0;">Barras: HH acumuladas · Líneas: % físico</div>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <span style="font-size:11px; color:var(--muted); font-weight:600;">PROYECCIÓN:</span>
+            <button class="scenarioBtn active" id="btnEscBase" onclick="setScenario('base')">Sin proyección</button>
+            <button class="scenarioBtn" id="btnEscA" onclick="setScenario('A')">📅 Esc A — ¿Cuándo termino?</button>
+            <button class="scenarioBtn" id="btnEscB" onclick="setScenario('B')">⏱ Esc B — ¿Cuántas HH más?</button>
+          </div>
+        </div>
+        <div id="scenarioInfo" style="display:none; margin-bottom:8px;"></div>
+        <div id="curveChart" class="chartBox"></div>
+      </div>
+
+      <div class="panel">
+        <div class="headerRow">
+          <div>
+            <div class="panel-title">Resumen por etapa (al corte)</div>
+            <div class="panel-sub" style="margin-bottom:0;">Vista macro del avance por etapa.</div>
+          </div>
+        </div>
+        <div class="tableWrap wrapAct">
+          <table id="stageTable"></table>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="panelRend">
+        <div class="panel-toggle-header" onclick="togglePanel('panelRend')">
+          <div>
+            <div class="panel-title">Rendimientos por tarea y sector</div>
+            <div class="panel-sub" style="margin-bottom:0;">HH/unidad real vs teórico por etapa. Naranja = peor que el plan.</div>
+          </div>
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div class="tableWrap" style="overflow-x:auto;">
+            <table id="rendCruzTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="panelSistema">
+        <div class="panel-toggle-header" onclick="togglePanel('panelSistema')">
+          <div>
+            <div class="panel-title">Avance por Sistema y Tarea</div>
+            <div class="panel-sub" style="margin-bottom:0;">% avance físico real por sistema para las 4 tareas clave.</div>
+          </div>
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div class="tableWrap" style="overflow-x:auto;">
+            <table id="sistemaTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="panelAct">
+        <div class="panel-toggle-header" onclick="togglePanel('panelAct')">
+          <div>
+            <div class="panel-title">Resumen por actividad (al corte)</div>
+            <div class="panel-sub" style="margin-bottom:0;">Click en una fila para filtrar tareas.</div>
+          </div>
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+            <span class="tag" id="filterTag">Filtro: Todas</span>
+            <button class="miniBtn" onclick="clearActivityFilter()">Ver todas</button>
+          </div>
+          <div class="tableWrap wrapAct">
+            <table id="actTable"></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel collapsed" id="panelTask">
+        <div class="panel-toggle-header" onclick="togglePanel('panelTask')">
+          <div>
+            <div class="panel-title" id="taskTitle">Análisis por tarea (al corte)</div>
+            <div class="panel-sub" style="margin-bottom:0;">Incluye ΔHH y Δ% (pp). Se resalta si Δ% (pp) &lt; 0.</div>
+          </div>
+          <span class="panel-chevron">▼</span>
+        </div>
+        <div class="panel-body" style="margin-top:12px;">
+          <div class="tableWrap wrapTask">
+            <table id="taskTable"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+
+<script>
+  let FULL_TASK_TABLE = null;
+  let FULL_ACT_TABLE  = null;
+  let SELECTED_ACT    = null;
+
+  /* ── FORMAT HELPERS ── */
+  function fmtNumber(x, dec=0){
+    if(x===null||x===undefined||x==="") return "-";
+    const n=Number(x); if(!isFinite(n)) return "-";
+    return n.toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  }
+  function fmtPct(x, dec=2){
+    if(x===null||x===undefined||x==="") return "-";
+    const n=Number(x); if(!isFinite(n)) return "-";
+    return (n*100).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec})+" %";
+  }
+  function fmtPctPlain(x, dec=2){
+    if(x===null||x===undefined||x==="") return "-";
+    const n=Number(x); if(!isFinite(n)) return "-";
+    return (n*100).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  }
+
+  /* ── SUMMARY BARS ── */
+  function buildSummaryBars(k){
+    const pctReal = Number(k.pctRealAcum||0);
+    const pctPlan = Number(k.pctPlanAcum||0);
+    const hhReal  = Number(k.hhReales||0);
+    const hhTot   = Number(k.hhPendTeorico||0) + hhReal; // total teórico
+    const pctHH   = hhTot>0 ? hhReal/hhTot : 0;
+
+    const mPlan   = Number(k.metrosTotalPlan||0);
+    const mReal   = Number(k.metrosTotalReal||0);
+    const pctM    = mPlan>0 ? mReal/mPlan : 0;
+
+    const atraso  = pctReal < pctPlan;
+    const colorReal = atraso ? 'orange' : 'blue';
+
+    const planMarkerPct = Math.min(100, pctPlan*100).toFixed(2);
+
+    document.getElementById("summaryBars").innerHTML = `
+      <div class="bar-item">
+        <div class="bar-header">
+          <div class="bar-label">
+            <div class="bar-icon blue">📐</div>
+            <div>
+              <div>AVANCE FÍSICO REAL</div>
+              <div class="bar-desc">Porcentaje de hitos completados</div>
+            </div>
+          </div>
+          <div class="bar-pct" style="color:${atraso?'var(--orange)':'var(--blue)'}">
+            ${fmtPctPlain(pctReal,1)}%
+          </div>
+        </div>
+        <div class="bar-track-wrap">
+          <div class="bar-track">
+            <div class="bar-fill ${colorReal}" style="width:${Math.min(100,pctReal*100).toFixed(2)}%"></div>
+          </div>
+          <div class="bar-marker" style="left:${planMarkerPct}%" title="Plan: ${fmtPctPlain(pctPlan,1)}%"></div>
+        </div>
+      </div>
+
+      <div class="bar-item">
+        <div class="bar-header">
+          <div class="bar-label">
+            <div class="bar-icon orange">⏱</div>
+            <div>
+              <div>INVERSIÓN HORAS HOMBRE</div>
+              <div class="bar-desc">Presupuesto de esfuerzo consumido</div>
+            </div>
+          </div>
+          <div class="bar-pct" style="color:var(--orange)">
+            ${fmtPctPlain(pctHH,1)}%
+          </div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill orange" style="width:${Math.min(100,pctHH*100).toFixed(2)}%"></div>
+        </div>
+      </div>
+
+      ${mPlan>0?`
+      <div class="bar-item">
+        <div class="bar-header">
+          <div class="bar-label">
+            <div class="bar-icon" style="background:${(k.mainUnit&&k.mainUnit.kpiBg)||'#e0f2fe'};color:${(k.mainUnit&&k.mainUnit.kpiColor)||'#0369a1'};">${(k.mainUnit&&k.mainUnit.kpiIcon)||'〰'}</div>
+            <div>
+              <div>${(k.mainUnit&&k.mainUnit.kpiTitle)||'AVANCE METROS DE CAÑERÍA'}</div>
+              <div class="bar-desc">${fmtNumber(mReal,0)} ${(k.mainUnit&&k.mainUnit.unitLabel)||'m'} instalados de ${fmtNumber(mPlan,0)} ${(k.mainUnit&&k.mainUnit.unitLabel)||'m'} totales</div>
+            </div>
+          </div>
+          <div class="bar-pct" style="color:${(k.mainUnit&&k.mainUnit.kpiColor)||'#0369a1'};">
+            ${fmtPctPlain(pctM,1)}%
+          </div>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${Math.min(100,pctM*100).toFixed(2)}%;background:${(k.mainUnit&&k.mainUnit.kpiColor)||'#0369a1'};"></div>
+        </div>
+      </div>`:''}
+    `;
+
+    // Alerta
+    const diff = pctHH - pctReal;
+    let alertHtml = "";
+    if(diff > 0.05){
+      const exceso = (diff*100).toFixed(0);
+      alertHtml = `
+        <div class="alert-box bad" style="margin-top:12px;">
+          <div class="alert-icon">⚠️</div>
+          <div>
+            <div class="alert-title" style="color:var(--red);">Sobrecosto de Esfuerzo Detectado</div>
+            <div class="alert-desc">Se ha consumido un ${exceso}% más de HH respecto al avance físico entregado.</div>
+          </div>
+        </div>`;
+    } else if(diff < -0.03){
+      const ahorro = (Math.abs(diff)*100).toFixed(0);
+      alertHtml = `
+        <div class="alert-box ok" style="margin-top:12px;">
+          <div class="alert-icon">✅</div>
+          <div>
+            <div class="alert-title" style="color:var(--green);">Eficiencia por encima del plan</div>
+            <div class="alert-desc">El avance físico supera en un ${ahorro}% la inversión de HH correspondiente.</div>
+          </div>
+        </div>`;
+    } else {
+      alertHtml = `
+        <div class="alert-box neutral" style="margin-top:12px;">
+          <div class="alert-icon">ℹ️</div>
+          <div>
+            <div class="alert-title">En línea con el plan</div>
+            <div class="alert-desc">La inversión de HH es consistente con el avance físico registrado.</div>
+          </div>
+        </div>`;
+    }
+    document.getElementById("alertBox").innerHTML = alertHtml;
+  }
+
+  /* ── KPI SECTIONS ── */
+  function colorForDiff(n, higherIsBad=true){
+    if(!isFinite(n)||n===0) return "c-neu";
+    if(higherIsBad) return n>0 ? "c-neg" : "c-pos";
+    else            return n>0 ? "c-pos" : "c-neg";
+  }
+
+  function kpiCard(value, unit, label, colorClass="c-neu"){
+    return `
+      <div class="kpi">
+        <div class="v ${colorClass}">${value}<span class="unit">${unit}</span></div>
+        <div class="t">${label}</div>
+      </div>`;
+  }
+
+  function buildKpiSections(k){
+    // ── AVANCE FÍSICO ──
+    const pR  = Number(k.pctRealAcum||0);
+    const pP  = Number(k.pctPlanAcum||0);
+    const dP  = Number(k.diffPctAcum||0);
+    const uR  = Number(k.ultAvReal||0);
+    const uP  = Number(k.ultAvPlan||0);
+    const dU  = Number(k.diffUltAv||0);
+
+    // Layout: Real (izq) | Plan (centro) | Desfase (der)
+    document.getElementById("kpisAvance").innerHTML = [
+      // Fila 1: Acumulado
+      kpiCard(fmtPctPlain(pR,2), "%", "Avance Real Acum.", "c-blue"),
+      kpiCard(fmtPctPlain(pP,2), "%", "Avance Plan Acum.", "c-neu"),
+      kpiCard((dP>=0?"+":"")+fmtPctPlain(dP,2), "%", "Desfase Acum.", colorForDiff(dP, false)),
+
+      // Fila 2: Última semana
+      kpiCard(fmtPctPlain(uR,2), "%", "Últ. Avance Sem. Real", "c-blue"),
+      kpiCard(fmtPctPlain(uP,2), "%", "Últ. Avance Sem. Plan", "c-neu"),
+      kpiCard((dU>=0?"+":"")+fmtPctPlain(dU,2), "%", "Desfase Sem.", colorForDiff(dU, false)),
+    ].join("");
+
+    // ── HORAS HOMBRE ──
+    const hhR   = Number(k.hhReales||0);
+    const hhPrv = Number(k.hhPrevPorAvance||0);
+    const dHH   = Number(k.diffRealVsPrev||0);
+    const hhPT  = Number(k.hhPendTeorico||0);
+    const hhPRe = Number(k.hhPendRend||0);
+    const dPend = Number(k.diffPend||0);
+    const hh1T  = Number(k.hhPor1PctTeor||0);
+    const hh1R  = k.hhPor1PctReal != null ? Number(k.hhPor1PctReal) : null;
+
+    // Color HH por 1% real: si > teórico es malo
+    const color1R = (hh1R!=null && isFinite(hh1R))
+      ? (hh1R > hh1T ? "c-neg" : "c-pos")
+      : "c-neu";
+
+    // HH Totales Proyectadas:
+    // Real    = HH gastadas + pendiente al rendimiento actual → ¿cuánto costará si sigo igual?
+    // Teórico = total HH presupuestadas en el Excel (plan de línea base)
+    const hhPlanExcel   = Number(k.hhPlanAcFinal||0) || Number(k.hhTotalPlanExcel||0) || (hhR + hhPT);
+    const hhTotProyReal = hhR  + hhPRe;
+    const hhTotProyTeor = hhPlanExcel;
+    const hhTotDiff     = hhTotProyReal - hhTotProyTeor;
+
+    // HH pend. (Teórico) = plan total − lo que el plan prevé gastado hasta el avance actual
+    const hhPTDisplay = Math.max(0, hhPlanExcel - hhPrv);
+    const dPendDisplay = hhPRe - hhPTDisplay;
+
+    // Layout: Real (izq) | Teórico/Plan (centro) | Desfase (der)
+    document.getElementById("kpisHH").innerHTML = [
+      // Fila 1: HH Totales Proyectadas (resumen principal)
+      kpiCard(fmtNumber(hhTotProyReal, 0),  "HH", "HH Total Proyectado (Real)",     "c-orange"),
+      kpiCard(fmtNumber(hhTotProyTeor, 0),  "HH", "HH Total Proyectado (Teórico)",  "c-neu"),
+      kpiCard((hhTotDiff>=0?"+":"")+fmtNumber(hhTotDiff,0), "HH", "Variación Proyección", colorForDiff(hhTotDiff, true)),
+
+      // Fila 2: HH consumidas
+      kpiCard(fmtNumber(hhR,0),   "HH", "Horas Reales",        "c-orange"),
+      kpiCard(fmtNumber(hhPrv,0), "HH", "HH Prev. por Avance", "c-neu"),
+      kpiCard((dHH>=0?"+":"")+fmtNumber(dHH,0), "HH", "Diferencia", colorForDiff(dHH, true)),
+
+      // Fila 3: HH pendientes
+      kpiCard(fmtNumber(hhPRe,0),        "HH", "HH pend. (Rend.)",   "c-orange"),
+      kpiCard(fmtNumber(hhPTDisplay,0),  "HH", "HH pend. (Teórico)", "c-neu"),
+      kpiCard((dPendDisplay>=0?"+":"")+fmtNumber(dPendDisplay,0), "HH", "Desfase HH pend.", colorForDiff(dPendDisplay, true)),
+
+      // Fila 4: Productividad HH por 1%
+      kpiCard(hh1R!=null?fmtNumber(hh1R,2):"-",  "HH/1%", "HH por 1% (Real)",    color1R),
+      kpiCard(fmtNumber(hh1T,2),                  "HH/1%", "HH por 1% (Teórico)", "c-neu"),
+      `<div class="kpi" style="visibility:hidden;"></div>`,  // espaciado grilla
+    ].join("");
+  }
+
+  /* ── CHARTS ── */
+  let CURRENT_SCENARIO = 'base';
+
+  function buildWeekTicks(weeks, desired=14){
+    const n=weeks.length; if(!n) return [];
+    const step=Math.max(1,Math.round(n/desired));
+    const t=[];
+    for(let i=0;i<n;i+=step) t.push(weeks[i]);
+    if(t[t.length-1]!==weeks[n-1]) t.push(weeks[n-1]);
+    return t;
+  }
+
+  function setScenario(sc){
+    CURRENT_SCENARIO = sc;
+    // Actualizar botones activos
+    ['base','A','B'].forEach(s => {
+      const btn = document.getElementById('btnEsc' + (s==='base'?'Base':s));
+      if(btn) btn.classList.toggle('active', s===sc);
+    });
+    if(window._lastData) drawCurve(window._lastData.curveSeries, window._lastData.proyecciones);
+  }
+
+  function drawCurve(curveSeries, proyecciones){
+    // Construir tabla unificada con columnas base + proyección según escenario
+    // Columnas base: WEEK_KEY | HH Plan Acum | HH Real Acum | % Físico Plan | % Físico Real
+    // + Proyección: HH Proy Acum | % Físico Proy
+
+    const baseRows = curveSeries.slice(1); // sin header
+    const baseKeys = new Set(baseRows.map(r=>r[0]));
+
+    // Rows de proyección según escenario
+    const escRows = (CURRENT_SCENARIO === 'A' && proyecciones?.escA)
+      ? proyecciones.escA
+      : (CURRENT_SCENARIO === 'B' && proyecciones?.escB)
+        ? proyecciones.escB
+        : [];
+
+    const showProy = CURRENT_SCENARIO !== 'base' && escRows.length > 0;
+
+    // Unificar semanas
+    const allWeekKeys = [...baseKeys];
+    if(showProy) escRows.forEach(r=>{ if(!baseKeys.has(r[0])) allWeekKeys.push(r[0]); });
+
+    // Ordenar semanas
+    allWeekKeys.sort();
+
+    // Map proyección por wk
+    const proyMap = {};
+    if(showProy) escRows.forEach(r=>{ proyMap[r[0]] = {hhProy:r[1], pctProy:r[2]}; });
+
+    // Map base por wk
+    const baseMap = {};
+    baseRows.forEach(r=>{ baseMap[r[0]] = {hhPlan:r[1], hhReal:r[2], pctPlan:r[3], pctReal:r[4]}; });
+
+    // Construir DataTable dinámicamente
+    const dt = new google.visualization.DataTable();
+    dt.addColumn('string', 'SEMANA');
+    dt.addColumn('number', 'HH Plan Acum');
+    dt.addColumn('number', 'HH Real Acum');
+    if(showProy) dt.addColumn('number', 'HH Proyectado');
+    dt.addColumn('number', '% Físico Plan');
+    dt.addColumn('number', '% Físico Real');
+    if(showProy) dt.addColumn('number', '% Físico Proyectado');
+
+    for(const wk of allWeekKeys){
+      const b = baseMap[wk] || {};
+      const p = proyMap[wk] || {};
+      const row = [
+        wk,
+        b.hhPlan  ?? null,
+        b.hhReal  ?? null,
+      ];
+      if(showProy) row.push(p.hhProy ?? null);
+      row.push(b.pctPlan ?? null);
+      row.push(b.pctReal ?? null);
+      if(showProy) row.push(p.pctProy ?? null);
+      dt.addRow(row);
+    }
+
+    const ticks = buildWeekTicks(allWeekKeys, 14);
+
+    // Índices de series dinámicos
+    let seriesConfig = {};
+    if(!showProy){
+      // base: 0=HHPlan(bar), 1=HHReal(bar), 2=%Plan(line), 3=%Real(line)
+      seriesConfig = {
+        0:{targetAxisIndex:0, type:'bars'},
+        1:{targetAxisIndex:0, type:'bars'},
+        2:{targetAxisIndex:1, type:'line', lineWidth:2.5},
+        3:{targetAxisIndex:1, type:'line', lineWidth:2.5},
+      };
+    } else if(CURRENT_SCENARIO==='A'){
+      // 0=HHPlan(bar),1=HHReal(bar),2=HHProy(bar),3=%Plan(line),4=%Real(line),5=%Proy(line dash)
+      seriesConfig = {
+        0:{targetAxisIndex:0, type:'bars'},
+        1:{targetAxisIndex:0, type:'bars'},
+        2:{targetAxisIndex:0, type:'bars'},
+        3:{targetAxisIndex:1, type:'line', lineWidth:2, lineDashStyle:[4,4]},
+        4:{targetAxisIndex:1, type:'line', lineWidth:2.5},
+        5:{targetAxisIndex:1, type:'line', lineWidth:2.5, lineDashStyle:[6,3]},
+      };
+    } else {
+      // Esc B: mismo que A pero colores distintos
+      seriesConfig = {
+        0:{targetAxisIndex:0, type:'bars'},
+        1:{targetAxisIndex:0, type:'bars'},
+        2:{targetAxisIndex:0, type:'bars'},
+        3:{targetAxisIndex:1, type:'line', lineWidth:2, lineDashStyle:[4,4]},
+        4:{targetAxisIndex:1, type:'line', lineWidth:2.5},
+        5:{targetAxisIndex:1, type:'line', lineWidth:2.5, lineDashStyle:[6,3]},
+      };
+    }
+
+    // Serie 0 = HH Plan Acum: oculta en barras y leyenda
+    if(seriesConfig[0]){ seriesConfig[0].visibleInLegend = false; seriesConfig[0].color = 'transparent'; }
+
+    const colors = !showProy
+      ? ["transparent","#fb923c","#2563eb","#16a34a"]
+      : CURRENT_SCENARIO==='A'
+        ? ["transparent","#fb923c","#a5b4fc","#2563eb","#16a34a","#7c3aed"]
+        : ["transparent","#fb923c","#fcd34d","#2563eb","#16a34a","#d97706"];
+
+    const options={
+      legend:{position:"bottom"},
+      chartArea:{left:70,top:30,right:70,bottom:110},
+      hAxis:{title:"SEMANA", ticks, slantedText:true, slantedTextAngle:45, textStyle:{fontSize:10}},
+      vAxes:{
+        0:{title:"HH acumuladas"},
+        1:{title:"% avance físico", format:"percent", viewWindow:{min:0, max:1.05}}
+      },
+      seriesType:"bars",
+      series: seriesConfig,
+      bar:{groupWidth:"70%"},
+      colors
+    };
+
+    // Formato entero para barras HH (tooltip sin decimales)
+    const hhFmt  = new google.visualization.NumberFormat({pattern: '#,##0'});
+    const hhCols = !showProy ? [1, 2] : [1, 2, 3];
+    hhCols.forEach(c => hhFmt.format(dt, c));
+
+    // Formato % para líneas de avance físico
+    const pctFmt = new google.visualization.NumberFormat({pattern: '#,##0.0%'});
+    const pctCols = !showProy ? [3, 4] : [4, 5, 6];
+    pctCols.forEach(c => pctFmt.format(dt, c));
+
+    new google.visualization.ComboChart(document.getElementById("curveChart")).draw(dt, options);
+
+    // Actualizar info box del escenario
+    const infoBox = document.getElementById("scenarioInfo");
+    if(!showProy || !proyecciones){
+      infoBox.style.display='none';
+      return;
+    }
+
+    infoBox.style.display='block';
+    if(CURRENT_SCENARIO==='A'){
+      const fin = proyecciones.finEscA || '—';
+      const hhTot = (proyecciones.hhPor1pct * 100).toFixed(0);
+      infoBox.innerHTML = `
+        <div class="scenario-info-box escA">
+          <span style="font-size:18px;">📅</span>
+          <div class="scenario-stat">
+            <div class="sv" style="color:#2563eb;">${fin}</div>
+            <div class="sl">Semana estimada de término</div>
+          </div>
+          <div style="width:1px;height:32px;background:#bfdbfe;"></div>
+          <div class="scenario-stat">
+            <div class="sv" style="color:#7c3aed;">${(proyecciones.avgAvanceSemReal*100).toFixed(2)}%</div>
+            <div class="sl">Ritmo semanal real (últimas 4 sem.)</div>
+          </div>
+          <div style="width:1px;height:32px;background:#bfdbfe;"></div>
+          <div style="font-size:11px;color:#475569;flex:1;">
+            Manteniendo el ritmo actual de avance físico semanal, el proyecto terminaría en <strong>${fin}</strong>.
+            ${proyecciones.finPlan ? `La fecha plan es <strong>${proyecciones.finPlan}</strong>.` : ''}
+          </div>
+        </div>`;
+    } else {
+      const hhExtra = Math.round(proyecciones.hhExtraEscB || 0);
+      const fin = proyecciones.finPlan || '—';
+      infoBox.innerHTML = `
+        <div class="scenario-info-box escB">
+          <span style="font-size:18px;">⏱</span>
+          <div class="scenario-stat">
+            <div class="sv" style="color:#d97706;">+${hhExtra.toLocaleString()} HH</div>
+            <div class="sl">HH adicionales requeridas</div>
+          </div>
+          <div style="width:1px;height:32px;background:#fcd34d;"></div>
+          <div class="scenario-stat">
+            <div class="sv" style="color:#d97706;">${fin}</div>
+            <div class="sl">Fecha límite (fin del plan)</div>
+          </div>
+          <div style="width:1px;height:32px;background:#fcd34d;"></div>
+          <div style="font-size:11px;color:#475569;flex:1;">
+            Para terminar en la semana plan <strong>${fin}</strong>, se necesitarían <strong>+${hhExtra.toLocaleString()} HH</strong> adicionales respecto al rendimiento proyectado.
+          </div>
+        </div>`;
+    }
+  }
+
+  function drawTrend(trendSeries){
+    const data=google.visualization.arrayToDataTable(trendSeries,false);
+    const options={
+      legend:{position:"none"},
+      chartArea:{left:60,top:20,right:20,bottom:60},
+      hAxis:{title:"SEMANA",slantedText:false,textStyle:{fontSize:10}},
+      vAxis:{title:"HH por 1% de avance",format:"0",viewWindow:{min:0}},
+      colors:["#f97316"],
+      lineWidth:2.5,
+      pointSize:4,
+    };
+    new google.visualization.LineChart(document.getElementById("trendChart")).draw(data,options);
+  }
+
+  /* ── TABLES ── */
+  function renderTable(tableId, rows, formatters, rowClassFn, rowAttrFn){
+    const table=document.getElementById(tableId);
+    const header=rows[0];
+    const body=rows.slice(1);
+    const th=header.map(h=>`<th>${h}</th>`).join("");
+    const tr=body.map((row,ridx)=>{
+      const cls=rowClassFn?(rowClassFn(row,ridx)||""):"";
+      const attrs=rowAttrFn?(rowAttrFn(row,ridx)||""):"";
+      const tds=row.map((cell,idx)=>{
+        const f=formatters?.[idx];
+        return `<td>${f?f(cell,row):(cell??"-")}</td>`;
+      }).join("");
+      return `<tr class="${cls}" ${attrs}>${tds}</tr>`;
+    }).join("");
+    table.innerHTML=`<thead><tr>${th}</tr></thead><tbody>${tr}</tbody>`;
+  }
+
+  function sortByHHRealDesc(rows){
+    const h=rows[0], b=rows.slice(1);
+    // Col 2 = hhCell {r, t} → ordenar por HH real (r)
+    b.sort((a,b2)=>{
+      const va = a[2]&&typeof a[2]==='object' ? (a[2].r||0) : (Number(a[2])||0);
+      const vb = b2[2]&&typeof b2[2]==='object' ? (b2[2].r||0) : (Number(b2[2])||0);
+      return vb - va;
+    });
+    return [h,...b];
+  }
+
+  function renderTaskTableFiltered(){
+    if(!FULL_TASK_TABLE) return;
+    let rows=FULL_TASK_TABLE;
+    if(SELECTED_ACT){
+      const h=rows[0];
+      rows=[h,...rows.slice(1).filter(r=>String(r[0]||"").trim()===SELECTED_ACT)];
+    }
+    renderTable("taskTable", rows, [
+      // 0 ACTIVIDAD
+      x => x,
+      // 1 TAREA
+      x => x,
+      // 2 Cant. Total
+      x => fmtNumber(x, 2),
+      // 3 Unidad
+      x => x,
+      // 4 Cant. Real (corte)
+      x => fmtNumber(x, 2),
+      // 5 % Real (corte)
+      x => fmtPct(x, 2),
+      // 6 % Plan (corte)
+      x => fmtPct(x, 2),
+      // 7 HH Real (corte)
+      x => fmtNumber(x, 2),
+      // 8 HH Plan (corte)
+      x => fmtNumber(x, 2),
+      // 9 Rend Plan
+      x => fmtNumber(x, 2),
+      // 10 Rend Real
+      x => (x != null && x !== "" && isFinite(Number(x))) ? fmtNumber(x, 2) : "-",
+      // 11 HH Rest.
+      x => fmtNumber(x, 2),
+    ], row => {
+      // resaltar si % Real < % Plan
+      const pReal = Number(row[5]);
+      const pPlan = Number(row[6]);
+      return (isFinite(pReal) && isFinite(pPlan) && pReal < pPlan) ? "delay" : "";
+    });
+    document.getElementById("taskTitle").textContent =
+      SELECTED_ACT ? `Análisis por tarea — ${SELECTED_ACT}` : "Análisis por tarea (al corte)";
+  }
+
+  // ── PANELES DESPLEGABLES ──
+  const COLLAPSIBLE_PANELS = ['panelRend','panelSistema','panelAct','panelTask'];
+
+  function togglePanel(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.classList.toggle('collapsed');
+    try { localStorage.setItem('panel_'+id, el.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
+  }
+
+  function restorePanelStates(){
+    COLLAPSIBLE_PANELS.forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      try {
+        const saved = localStorage.getItem('panel_'+id);
+        if(saved === '0') el.classList.remove('collapsed');   // usuario lo abrió antes
+        else              el.classList.add('collapsed');       // cerrado por defecto
+      } catch(e){}
+    });
+  }
+
+  restorePanelStates();
+
+  function wireActivitySelection(){
+    const tbody=document.getElementById("actTable").querySelector("tbody");
+    if(!tbody) return;
+    Array.from(tbody.querySelectorAll("tr")).forEach(tr=>{
+      tr.addEventListener("click",()=>{
+        const act=tr.querySelector("td")?.textContent?.trim();
+        if(!act) return;
+        SELECTED_ACT=act;
+        document.getElementById("filterTag").textContent=`Filtro: ${act}`;
+        Array.from(tbody.querySelectorAll("tr")).forEach(x=>x.classList.remove("selected"));
+        tr.classList.add("selected");
+        renderTaskTableFiltered();
+      });
+    });
+  }
+
+  function clearActivityFilter(){
+    SELECTED_ACT=null;
+    document.getElementById("filterTag").textContent="Filtro: Todas";
+    const tbody=document.getElementById("actTable")?.querySelector("tbody");
+    if(tbody) Array.from(tbody.querySelectorAll("tr")).forEach(x=>x.classList.remove("selected"));
+    renderTaskTableFiltered();
+  }
+
+  /* ── LOAD ── */
+  function handleData(res){
+    window._lastData=res;
+
+    const trendPanel = document.getElementById("trendChart")?.parentElement;
+    if(trendPanel){
+      const titleEl = trendPanel.querySelector(".panel-title");
+      const subEl = trendPanel.querySelector(".panel-sub");
+      if(titleEl) titleEl.textContent = "Rendimiento ultimas 6 semanas";
+      if(subEl) subEl.textContent = "HH invertidas por cada 1% de avance físico global.";
+    }
+
+    if(res.meta.projectName){ document.getElementById("projectTitle").textContent=res.meta.projectName; document.title=res.meta.projectName; }
+    document.getElementById("meta").textContent=`Generado: ${res.meta.generatedAtISO}`;
+    document.getElementById("corte").textContent=
+      `Corte REAL: ${res.meta.corteWeekKey} · lunes ${res.meta.corteMondayISO}`;
+    document.getElementById("foot").textContent=
+      `Fuente: Planificación Inicial, AVANCE_HH_REAL (2), AVANCE_REAL_CANT (2).`;
+
+    buildSummaryBars(res.kpis);
+    buildKpiSections(res.kpis);
+
+    drawCurve(res.curveSeries, res.proyecciones);
+    drawTrend(res.trendSeries);
+
+    FULL_TASK_TABLE=res.taskTable;
+    FULL_ACT_TABLE=sortByHHRealDesc(res.activitySummary);
+
+    const stageSummary = res.stageSummary || [["ETAPA","m (corte / total)","HH (corte / total)","% Avance HH","% Avance Real","% Avance Plan","Rend. Real / Plan"]];
+    const stageSorted = sortByHHRealDesc(stageSummary);
+    renderTable("stageTable", stageSorted, [
+      // Col 0: ETAPA
+      x => x,
+      // Col 1: M (corte / total)
+      x => { if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} m / ${fmtNumber(x.t,0)} m`; },
+      // Col 2: HH (corte / total)
+      x => { if(!x||typeof x!=='object') return '-'; return `${fmtNumber(x.r,0)} / ${fmtNumber(x.t,0)} HH`; },
+      // Col 3: % Avance HH
+      x => x==null ? '-' : fmtPct(x, 1),
+      // Col 4: % Avance Real (verde si ≥ Plan, rojo si <)
+      (x, row) => {
+        if(x==null) return '-';
+        const plan = row[5];
+        const cls = (plan==null || x >= plan) ? 'c-pos' : 'c-neg';
+        return `<span class="${cls}">${fmtPct(x,2)}</span>`;
+      },
+      // Col 5: % Avance Plan
+      x => x==null ? '-' : fmtPct(x, 2),
+      // Col 6: Rend. Real / Plan
+      x => {
+        if(!x||typeof x!=='object') return '-';
+        const rr = x.real!=null ? fmtNumber(x.real,2)+' HH/m' : '-';
+        const rp = x.plan!=null ? fmtNumber(x.plan,2)+' HH/m' : '-';
+        return `<span style="color:#0f172a;font-weight:600">${rr}</span> / <span style="color:#475569">${rp}</span>`;
+      },
+    ], null, (row) => `data-etapa="${(row[0]||'').replace(/"/g,'&quot;')}"`);
+    wireStageTableClick();
+    // Fila de totales de cañería (metros)
+    (function(){
+      let mT=0, mR=0, has=false;
+      stageSorted.slice(1).forEach(row=>{ const m=row[1]; if(m&&typeof m==='object'){mT+=m.t||0;mR+=m.r||0;has=true;} });
+      if(!has) return;
+      const tbl = document.getElementById("stageTable");
+      const tf = tbl.createTFoot();
+      const tr = tf.insertRow();
+      tr.style.cssText='border-top:2px solid #94a3b8;font-weight:700;background:#f1f5f9;';
+      tr.innerHTML=`<td>Total cañería</td><td>${fmtNumber(mR,0)} m / ${fmtNumber(mT,0)} m</td><td colspan="5"></td>`;
+    })();
+
+    renderTable("actTable", FULL_ACT_TABLE, [
+      x=>x,
+      x=>fmtNumber(x,2),
+      x=>fmtNumber(x,2),
+      x=>{const n=Number(x),c=n>0?"c-neg":n<0?"c-pos":"c-neu"; return `<span class="${c}">${fmtNumber(n,2)}</span>`;},
+      x=>fmtPct(x,2),
+      x=>fmtPct(x,2),
+      x=>{const n=Number(x),c=n<0?"c-neg":n>0?"c-pos":"c-neu"; return `<span class="${c}">${fmtPct(n,2)}</span>`;},
+    ]);
+    wireActivitySelection();
+    clearActivityFilter();
+    renderTaskTableFiltered();
+    renderRendimientosCruzados(res.rendimientosCruzados);
+    renderAvancePorSistema(res.avancePorSistema);
+  }
+
+  let SISTEMA_DATA = null;
+  let selectedStageEtapa = null;
+
+  function renderAvancePorSistema(data, filterEtapa) {
+    const el = document.getElementById("sistemaTable");
+    if (!data || !data.rows || !data.cols) { el.innerHTML = ''; return; }
+    SISTEMA_DATA = data;
+    const cols = data.cols;
+    const rows = filterEtapa
+      ? data.rows.filter(r => r.etapa === filterEtapa)
+      : data.rows;
+
+    // Cabecera
+    const filterLabel = filterEtapa
+      ? ` <span style="font-weight:400;color:#64748b;font-size:11px;">— ${filterEtapa}</span>`
+      : '';
+    const thead = `<tr>
+      <th>Sistema${filterLabel}</th>
+      ${cols.map(c => `<th>${c.label}</th>`).join('')}
+    </tr>`;
+
+    // Filas
+    let tbody = '';
+    for (const row of rows) {
+      let tds = '';
+      for (const col of cols) {
+        const v = row[col.key];
+        if (v === null || v === undefined) {
+          tds += `<td class="sys-na"></td>`;
+        } else {
+          const pct = v * 100;
+          const cls = pct >= 100 ? 'sys-done' : pct >= 75 ? 'sys-high' : pct >= 40 ? 'sys-mid' : pct > 0 ? 'sys-low' : 'sys-zero';
+          const fillColor = pct >= 100 ? '#16a34a' : pct >= 75 ? '#22c55e' : pct >= 40 ? '#eab308' : '#ef4444';
+          tds += `<td class="${cls}">
+            <div class="sys-bar-wrap">
+              <div class="sys-bar"><div class="sys-bar-fill" style="width:${Math.min(100,pct).toFixed(1)}%;background:${fillColor};"></div></div>
+              <span style="min-width:36px;font-family:'DM Mono',monospace;font-size:11px;">${fmtPct(v,1)}</span>
+            </div>
+          </td>`;
+        }
+      }
+      tbody += `<tr><td>${row.sistema}</td>${tds}</tr>`;
+    }
+
+    el.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
+  }
+
+  function wireStageTableClick() {
+    const tbl = document.getElementById("stageTable");
+    if (!tbl) return;
+    const tbody = tbl.querySelector("tbody");
+    if (!tbody) return;
+    tbody.querySelectorAll("tr").forEach(tr => {
+      tr.style.cursor = "pointer";
+      tr.addEventListener("click", () => {
+        const isSelected = tr.classList.contains("selected");
+        tbody.querySelectorAll("tr").forEach(r => r.classList.remove("selected"));
+        if (isSelected) {
+          // deseleccionar → mostrar todos
+          selectedStageEtapa = null;
+          renderAvancePorSistema(SISTEMA_DATA, null);
+        } else {
+          tr.classList.add("selected");
+          // col 0 = etapa label, pero necesitamos la clave normalizada
+          // la guardamos en data-etapa al renderizar
+          selectedStageEtapa = tr.dataset.etapa || null;
+          renderAvancePorSistema(SISTEMA_DATA, selectedStageEtapa);
+          // abrir panel si está colapsado
+          const panel = document.getElementById("panelSistema");
+          if (panel && panel.classList.contains("collapsed")) togglePanel("panelSistema");
+        }
+      });
+    });
+  }
+
+  function renderRendimientosCruzados(data){
+    const el = document.getElementById("rendCruzTable");
+    if(!data || !data.rows || !data.stages){ el.innerHTML=''; return; }
+    const stages = data.stages;
+    const n = stages.length;
+    const labels = stages.map(s => s.label || s.key);
+
+    // Cabecera fila 1
+    let thead = `<tr>
+      <th rowspan="2" style="vertical-align:bottom;">Tarea</th>
+      <th colspan="${n}" class="group-real">Rendimientos reales (HH/u)</th>
+      <th colspan="${n}" class="group-teo">Rendimientos teóricos (HH/u)</th>
+    </tr>`;
+    // Cabecera fila 2
+    thead += `<tr>${labels.map(l=>`<th class="sub">${l}</th>`).join('')}${labels.map(l=>`<th class="sub">${l}</th>`).join('')}</tr>`;
+
+    let tbody = '';
+    for(const row of data.rows){
+      let tds = '';
+      // Celdas real
+      for(const s of stages){
+        const v = row.real[s.key];
+        const t = row.teorico[s.key];
+        if(v == null){ tds += `<td class="rend-cell rend-null"></td>`; continue; }
+        const bad = (t != null && v > t * 1.05);
+        const good = (t != null && v <= t);
+        const cls = bad ? 'rend-bad' : good ? 'rend-good' : '';
+        tds += `<td class="rend-cell ${cls}">${fmtNumber(v,2)}</td>`;
+      }
+      // Celdas teórico
+      for(const s of stages){
+        const v = row.teorico[s.key];
+        if(v == null){ tds += `<td class="rend-teo teo-null"></td>`; continue; }
+        tds += `<td class="rend-teo">${fmtNumber(v,2)}</td>`;
+      }
+      tbody += `<tr><td>${row.nombre}</td>${tds}</tr>`;
+    }
+
+    el.innerHTML = `<thead>${thead}</thead><tbody>${tbody}</tbody>`;
+  }
+
+  function importarDatos(){
+    const btnI = document.getElementById("btnImport");
+    const btnR = document.getElementById("btnRefresh");
+    btnI.disabled = true;
+    btnR.disabled = true;
+    btnI.textContent = "Importando…";
+    document.getElementById("meta").textContent = "Importando datos desde Excel…";
+
+    if(typeof google !== "undefined" && google.script && google.script.run){
+      google.script.run
+        .withSuccessHandler(()=>{
+          btnI.textContent = "Importar datos";
+          btnI.disabled = false;
+          load();
+        })
+        .withFailureHandler(err=>{
+          btnI.textContent = "Importar datos";
+          btnI.disabled = false;
+          btnR.disabled = false;
+          document.getElementById("meta").textContent = "Error al importar";
+          alert(err.message || err);
+        })
+        .actualizarManualmente();
+    } else {
+      setTimeout(()=>{
+        btnI.textContent = "Importar datos";
+        btnI.disabled = false;
+        btnR.disabled = false;
+        document.getElementById("meta").textContent = "Modo preview — importación simulada";
+      }, 1200);
+    }
+  }
+
+  function load(){
+    const btn=document.getElementById("btnRefresh");
+    btn.disabled=true;
+    document.getElementById("meta").textContent="Cargando…";
+
+    // Guard: funciona tanto en Apps Script como en browser standalone
+    if(typeof google !== "undefined" && google.script && google.script.run){
+      google.script.run
+        .withSuccessHandler(res=>{ handleData(res); btn.disabled=false; })
+        .withFailureHandler(err=>{ document.getElementById("meta").textContent="Error"; btn.disabled=false; alert(err.message||err); })
+        .getDashboardData();
+    } else {
+      // Modo preview standalone: datos de ejemplo para visualizar el diseño
+      setTimeout(()=>{
+        handleData(DEMO_DATA);
+        btn.disabled=false;
+      }, 600);
+    }
+  }
+
+  window.addEventListener("resize",()=>{
+    if(window._lastData){
+      drawCurve(window._lastData.curveSeries, window._lastData.proyecciones);
+      drawTrend(window._lastData.trendSeries);
+    }
+  });
+
+  // ── DEMO DATA (solo se usa fuera de Apps Script) ──
+  const DEMO_DATA = {
+    meta:{ generatedAtISO:"2026-03-09 08:43", corteWeekKey:"W202611", corteMondayISO:"2026-03-09" },
+    kpis:{
+      pctRealAcum:0.3558, pctPlanAcum:0.4510, diffPctAcum:-0.0952,
+      ultAvReal:0.0, ultAvPlan:0.0687, diffUltAv:-0.0687,
+      hhReales:3793, hhPrevPorAvance:4538, diffRealVsPrev:-745,
+      hhPendTeorico:8960, hhPendRend:9673, diffPend:713,
+      hhPor1PctTeor:127.53, hhPor1PctReal:106.60
+    },
+    curveSeries:[
+      ["WEEK_KEY","HH Plan Acum","HH Real Acum","% Físico Plan","% Físico Real"],
+      ["W202544",500,0,0.03,0],["W202545",900,200,0.06,0.01],
+      ["W202546",1400,500,0.09,0.03],["W202547",1900,800,0.12,0.05],
+      ["W202548",2400,1100,0.15,0.08],["W202549",2900,1400,0.18,0.11],
+      ["W202550",3400,1700,0.22,0.14],["W202551",3900,2000,0.26,0.18],
+      ["W202603",4400,2300,0.30,0.22],["W202604",5000,2600,0.34,0.26],
+      ["W202605",5700,2900,0.38,0.29],["W202606",6500,3200,0.42,0.32],
+      ["W202607",7400,3500,0.45,0.35],["W202608",8300,3793,0.45,0.356],
+      ["W202609",9200,null,0.48,null],["W202610",10200,null,0.52,null],
+      ["W202611",11300,null,0.57,null],
+    ],
+    trendSeries:[
+      ["WEEK_KEY","Plan","Rend Real Semanal"],
+      ["W202604",1.00,1.22],["W202605",1.00,1.16],["W202606",1.00,1.11],
+      ["W202607",1.00,1.04],["W202608",1.00,0.98],["W202609",1.00,null],
+    ],
+    stageSummary:[
+      ["ETAPA","HH Plan (corte)","HH Real (corte)","Δ HH","% Físico Plan","% Físico Real","Δ % (pp)"],
+      ["e1 - shopping",3782.80,3793.00,10.20,0.4510,0.3558,-0.0952],
+      ["logística y obrador",264.00,311.00,47.00,0.5000,0.0000,-0.5000],
+      ["pem",0,0,0,0,0,0],
+    ],
+    activitySummary:[
+      ["ACTIVIDAD","HH Plan (corte)","HH Real (corte)","Δ HH","% Físico Plan","% Físico Real","Δ % (pp)"],
+      ["Montaje",3518.80,3026.00,-492.80,0.5420,0.1567,-0.3853],
+      ["Tendidos y Conexionados",0,456.00,456.00,0,0.0362,0.0362],
+      ["Logística y Obrador",264,311.00,47.00,0.50,0,-0.50],
+      ["PEM",0,0,0,0,0,0],
+    ],
+    taskTable:[
+      ["ACTIVIDAD","TAREA","Cant. Total","Unidad","Cant. Real (corte)","% Real (corte)","% Plan (corte)","HH Real (corte)","HH Plan (corte)","Rend Plan (HH/u)","Rend Real (HH/u)","HH Rest. (rend act.)"],
+      ["Montaje","Montaje de Bandejas",917,"m",733.6,0.80,0.90,856.00,1017.60,1.39,1.17,214],
+      ["Montaje","Montaje de Bahías GIS",8,"un",0,0,0.46,1662.00,1430.60,388.75,null,4294004],
+      ["Montaje","Montaje de Equipos",10,"un",4,0.40,0.80,382.00,864.80,3,2.65,573],
+      ["Tendidos y Conexionados","Tendido de Cable BT",21200,"m",1060,0.05,0,456,0,0.12,0.27,1539],
+    ],
+    proyecciones:{
+      finEscA: "W202635",
+      finPlan: "W202629",
+      hhExtraEscB: 1850,
+      avgAvanceSemReal: 0.018,
+      hhPor1pct: 106.60,
+      escA:[
+        ["W202610",4100,0.39],["W202611",4350,0.41],["W202612",4600,0.43],
+        ["W202613",4850,0.45],["W202614",5100,0.46],["W202615",5350,0.48],
+        ["W202616",5600,0.50],["W202617",5850,0.52],["W202618",6100,0.54],
+        ["W202619",6350,0.56],["W202620",6600,0.58],["W202621",6850,0.60],
+        ["W202622",7100,0.61],["W202623",7350,0.63],["W202624",7600,0.65],
+        ["W202625",7850,0.67],["W202626",8100,0.69],["W202627",8350,0.71],
+        ["W202628",8600,0.72],["W202629",8850,0.74],["W202630",9100,0.76],
+        ["W202631",9350,0.78],["W202632",9600,0.80],["W202633",9850,0.81],
+        ["W202634",10100,0.83],["W202635",10300,1.00],
+      ],
+      escB:[
+        ["W202610",4300,0.40],["W202611",4800,0.45],["W202612",5400,0.52],
+        ["W202613",6000,0.59],["W202614",6700,0.66],["W202615",7400,0.72],
+        ["W202616",8200,0.79],["W202617",9000,0.85],["W202618",9800,0.91],
+        ["W202619",10600,0.95],["W202620",11400,0.98],["W202629",12700,1.00],
+      ]
+    }
+  };
+
+  // Iniciar cuando Charts esté listo
+  if(typeof google !== "undefined" && google.charts){
+    google.charts.load("current", {packages:["corechart"]});
+    google.charts.setOnLoadCallback(load);
+  } else {
+    // Fallback si google charts no cargó (sin internet, etc.)
+    window.addEventListener("load", ()=> setTimeout(load, 300));
+  }
+</script>
+</body>
+</html>
