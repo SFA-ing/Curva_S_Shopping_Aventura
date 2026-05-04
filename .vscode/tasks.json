@@ -1,0 +1,25 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "commit-config-js",
+			"type": "shell",
+			"command": "git add Config.js && git commit -m \"Actualizar Config.js con valores reales de FEMSA Coca\" && git push origin master"
+		},
+		{
+			"label": "commit-config-js-2",
+			"type": "shell",
+			"command": "git add Config.js; git commit -m \"Actualizar Config.js con valores reales de FEMSA Coca\"; git push origin master"
+		},
+		{
+			"label": "commit-config-batch",
+			"type": "shell",
+			"command": "cmd.exe /c commit-config.bat"
+		},
+		{
+			"label": "delete-temp-batch",
+			"type": "shell",
+			"command": "cmd.exe /c del commit-config.bat"
+		}
+	]
+}
