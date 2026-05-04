@@ -1,30 +1,34 @@
 // ====================================================================
-//  CONFIG.JS — Configuración específica del proyecto FEMSA COCA
+//  CONFIG.JS — Configuración específica del proyecto
+//
+//  Para adaptar este dashboard a un nuevo proyecto:
+//  1. Ajusta las secciones marcadas con  ← EDITAR
+//  2. No es necesario modificar Código.js, ETL.js ni Index.html.html
 // ====================================================================
 
 // --------------------------------------------------------------------
-//  IDENTIDAD DEL PROYECTO
+//  IDENTIDAD DEL PROYECTO                                  ← EDITAR
 // --------------------------------------------------------------------
-const PROJECT_NAME = "FEMSA COCA — Reporte Avance Físico";
+const PROJECT_NAME = "FEMSA-Coca — Reporte Avance Físico";
 
 // --------------------------------------------------------------------
-//  FUENTE DE DATOS: Excel en Drive
+//  FUENTE DE DATOS: Excel en Drive                         ← EDITAR
 //  ID de la CARPETA de Drive que contiene el archivo Excel origen.
 // --------------------------------------------------------------------
-const SOURCE_EXCEL_FOLDER_ID = "REEMPLAZAR_CON_ID_CARPETA_DRIVE";
+const SOURCE_EXCEL_FOLDER_ID = "1fWHeg1uio6WrA_W4zI38MiGPlLNnUAa5";
 
 // --------------------------------------------------------------------
-//  URL PÚBLICA DEL WEB APP (se actualiza al re-desplegar)
+//  URL PÚBLICA DEL WEB APP (se actualiza al re-desplegar)  ← EDITAR
 // --------------------------------------------------------------------
-var REPORTE_FISICO_URL = "REEMPLAZAR_CON_URL_WEBAPP";
+var REPORTE_FISICO_URL = "https://script.google.com/a/macros/ingener.com/s/AKfycbxWdCIiru9RAKu8i0A7V7WCy8O7N3enoi72zimua66pBytYcwCwTfbYMsgz8ZO1UoOB/exec";
 
 // --------------------------------------------------------------------
-//  HOJA CACHE DE DATOS
+//  HOJA CACHE DE DATOS                                     ← EDITAR
 //  ID del Google Sheets que actúa como caché para el dashboard.
 //  DASHBOARD_KEY: clave única del proyecto (sin espacios ni tildes).
 // --------------------------------------------------------------------
-var CACHE_SHEET_ID = "REEMPLAZAR_CON_ID_GOOGLE_SHEETS_CACHE";
-var DASHBOARD_KEY  = "femsa_coca";
+var CACHE_SHEET_ID = "1YQRiCFX_MvpUhlxnjKHXbdnglgHee0vm1yCi34mUB9I";
+var DASHBOARD_KEY  = "Femsa_Coca";
 
 // --------------------------------------------------------------------
 //  HOJAS DE GOOGLE SHEETS — destino del ETL
@@ -55,7 +59,9 @@ const MAIN_UNIT = {
 };
 
 // --------------------------------------------------------------------
-//  TAREAS CLAVE — tabla "Avance por Sistema × Tarea"
+//  TAREAS CLAVE — tabla "Avance por Sistema × Tarea"       ← EDITAR
+//  Definir entre 1 y 6 tareas. El campo "re" es la regex de búsqueda
+//  contra la columna TAREA del plan.
 // --------------------------------------------------------------------
 const KEY_TASKS = [
   { key: "tarea1", label: "Tarea Clave 1", re: /tarea.?1/i },
