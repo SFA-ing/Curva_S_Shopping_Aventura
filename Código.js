@@ -1460,3 +1460,70 @@ function diagnosticoDenominador_(taskMeta) {
   }
   return { total, conQty, conHH, conAmbos, ejemploSinHH, ejemploSinQty };
 }
+
+// ============================================================
+//  DEBUG: ejecutar desde el editor de Apps Script.
+//  Imprime las (eta, act, tar) donde qtyReal/qtyPlan > 1 y
+//  cuánto HH "extra" están sumando al numerador global.
+// ============================================================
+function debugSobreejecucionPorTarea() {
+  const ss     = SpreadsheetApp.openById(CACHE_SHEET_ID);
+  const shPlan = ss.getSheetByName(DEST_PLAN_SHEET_NAME);
+  const shQty  = ss.getSheetByName(DEST_REAL_CANT_SHEET_NAME);
+  const shHH   = ss.getSheetByName(DEST_REAL_HH_SHEET_NAME);
+  if (!shPlan || !shQty || !shHH) {
+    Logger.log("Faltan hojas Plan/Real/HH.");
+    return;
+  }
+
+  const taskMeta  = construirTaskMeta_(shPlan);
+  // Acumulado real por (eta,act,tar) sumando todas las semanas
+  const qtyRealAc = {};
+  const vq = shQty.getDataRange().getValues();
+  const hq = vq[0].map(String);
+  const iqEta = hq.indexOf("ETAPA"), iqAct = hq.indexOf("ACTIVIDAD");
+  const iqTar = hq.indexOf("TAREA"), iqVal = hq.indexOf("Valor");
+  for (let r = 1; r < vq.length; r++) {
+    const eta = normalizeKey_(vq[r][iqEta]);
+    const act = normalizeKey_(vq[r][iqAct]);
+    const tar = normalizeKey_(vq[r][iqTar]);
+    if (!eta || !act || !tar) continue;
+    const k = eta + "||" + act + "||" + tar;
+    qtyRealAc[k] = (qtyRealAc[k] || 0) + Number(vq[r][iqVal] || 0);
+  }
+
+  let totalHH = 0, earnedHH = 0, excesoHH = 0;
+  let ratiosMax = 0, peor = "";
+  const sobre = [];
+
+  for (const [k, m] of Object.entries(taskMeta)) {
+    const qP = Number(m.qtyPlan || 0);
+    const hP = Number(m.hhPlan  || 0);
+    if (!(qP > 0) || !(hP > 0)) continue;
+    totalHH += hP;
+    const qR = Number(qtyRealAc[k] || 0);
+    const ratio = qR / qP;
+    const earned = ratio * hP;
+    earnedHH += earned;
+    if (ratio > 1) {
+      const extra = (ratio - 1) * hP;
+      excesoHH += extra;
+      sobre.push({ k, qP, qR, ratio, hP, extra });
+      if (ratio > ratiosMax) { ratiosMax = ratio; peor = k; }
+    }
+  }
+
+  Logger.log("=== DIAGNÓSTICO % AVANCE REAL (sin capear) ===");
+  Logger.log("Σ hhPlan (denominador) = " + totalHH.toFixed(2));
+  Logger.log("Σ earnedHH (numerador) = " + earnedHH.toFixed(2));
+  Logger.log("Σ HH exceso (ratio>1)  = " + excesoHH.toFixed(2));
+  Logger.log("% Real sin cap         = " + (earnedHH/totalHH*100).toFixed(2) + "%");
+  Logger.log("% Real con cap 100%    = " + ((earnedHH - excesoHH)/totalHH*100).toFixed(2) + "%");
+  Logger.log("Ratio máximo: " + ratiosMax.toFixed(2) + " en " + peor);
+
+  sobre.sort((a,b) => b.extra - a.extra);
+  Logger.log("=== TOP 20 tareas con sobrejecución (más HH extra al numerador) ===");
+  for (const s of sobre.slice(0, 20)) {
+    Logger.log(`+${s.extra.toFixed(1)} HH | ratio ${s.ratio.toFixed(2)} | qP=${s.qP} qR=${s.qR} hP=${s.hP} | ${s.k}`);
+  }
+}
