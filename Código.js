@@ -7,8 +7,12 @@
 //    FIX 3: rendimiento real = HH acum / Qty acum al corte
 //            (no ratio semanal), con fallback al teórico si
 //            el acumulado real no es válido.
-//    FIX 4: normalización de claves act||tar para evitar
-//            mismatches por espacios / tildes / mayúsculas.
+//    FIX 4: normalización de claves para evitar mismatches por
+//            espacios / tildes / mayúsculas.
+//    FIX 6: clave eta||act||tar (etapa+actividad+tarea) en
+//            taskMeta y cortes — la misma act+tar en etapas
+//            distintas son cantidades independientes con su
+//            propio rendimiento, no se mezclan.
 //    DENOMINADOR: siempre cantidad teórica del LB (qtyPlan).
 // ============================================================
 
@@ -170,8 +174,8 @@ function getDashboardData() {
   const hhRealSem = sumaPorSemana_(shHH,   "SEMANAS.WEEK_KEY", "Valor");
 
   // Series qty plan/real por semana y tarea
-  const qtyPlanByWeekTask = cantidadPorSemanaPorTarea_(shPlan, "SEMANAS.WEEK_KEY", "ACTIVIDAD", "TAREA", "Avance Real");
-  const qtyRealByWeekTask = cantidadPorSemanaPorTarea_(shQty,  "SEMANAS.WEEK_KEY", "ACTIVIDAD", "TAREA", "Valor");
+  const qtyPlanByWeekTask = cantidadPorSemanaPorTarea_(shPlan, "SEMANAS.WEEK_KEY", "ETAPA", "ACTIVIDAD", "TAREA", "Avance Real");
+  const qtyRealByWeekTask = cantidadPorSemanaPorTarea_(shQty,  "SEMANAS.WEEK_KEY", "ETAPA", "ACTIVIDAD", "TAREA", "Valor");
 
   // Universo de semanas
   const weekSet = new Set([
@@ -600,52 +604,87 @@ function construirTablaTareasV2_(shPlan, cutMonday, taskMeta, byTaskCut) {
     "HH Rest. (rend act.)"
   ]);
 
-  const keys = Object.keys(taskMeta).sort((a, b) => {
-    const A = taskMeta[a], B = taskMeta[b];
+  // taskMeta está indexado por eta||act||tar. Para la tabla agregamos por
+  // (act,tar) sumando totales entre etapas, y los % se calculan ponderados
+  // por HH (cada etapa aporta earnedHH = pctEtapa * hhPlanEtapa).
+  const agg = {}; // "act||tar" -> agregado
+  for (const [k, m] of Object.entries(taskMeta)) {
+    const ak = m.actividad + "||" + m.tarea;
+    if (!agg[ak]) {
+      agg[ak] = {
+        actividad: m.actividadOrig || m.actividad,
+        tarea    : m.tareaOrig    || m.tarea,
+        unidad   : m.unidad || "",
+        qtyPlanTotal: 0,
+        hhPlanTotal : 0,
+        qtyPlanCut  : 0,
+        hhPlanCut   : 0,
+        qtyRealCut  : 0,
+        hhRealCut   : 0,
+        earnedHHPlan: 0,
+        earnedHHReal: 0,
+        hhRest      : 0,
+      };
+    }
+    const a = agg[ak];
+    const qtyPlanTotalE = Number(m.qtyPlan || 0);
+    const hhPlanTotalE  = Number(m.hhPlan  || 0);
+    const qtyPlanCutE   = Number(qtyPlanCutByTask[k] || 0);
+    const hhPlanCutE    = Number(hhPlanCutByTask[k]  || 0);
+    const real          = byTaskCut[k] || { hhReal: 0, qtyReal: 0, rendReal: null };
+    const qtyRealCutE   = Number(real.qtyReal || 0);
+    const hhRealCutE    = Number(real.hhReal  || 0);
+
+    a.qtyPlanTotal += qtyPlanTotalE;
+    a.hhPlanTotal  += hhPlanTotalE;
+    a.qtyPlanCut   += qtyPlanCutE;
+    a.hhPlanCut    += hhPlanCutE;
+    a.qtyRealCut   += qtyRealCutE;
+    a.hhRealCut    += hhRealCutE;
+    if (!a.unidad && m.unidad) a.unidad = m.unidad;
+
+    // earned HH por etapa (denominador hhPlanTotal_total queda fijo abajo)
+    if (qtyPlanTotalE > 0 && hhPlanTotalE > 0) {
+      a.earnedHHPlan += (qtyPlanCutE / qtyPlanTotalE) * hhPlanTotalE;
+      a.earnedHHReal += (qtyRealCutE / qtyPlanTotalE) * hhPlanTotalE;
+    }
+
+    // HH restantes con rend real de la etapa (fallback al plan de la etapa)
+    let rendE = real.rendReal;
+    if (rendE == null || !isFinite(rendE) || rendE <= 0) rendE = m.rendPlan;
+    const qtyRemE = Math.max(0, qtyPlanTotalE - qtyRealCutE);
+    if (rendE != null && isFinite(rendE) && rendE > 0) a.hhRest += qtyRemE * rendE;
+  }
+
+  const aggKeys = Object.keys(agg).sort((a, b) => {
+    const A = agg[a], B = agg[b];
     if (A.actividad !== B.actividad) return A.actividad.localeCompare(B.actividad);
     return A.tarea.localeCompare(B.tarea);
   });
 
-  for (const k of keys) {
-    const m = taskMeta[k];
+  for (const ak of aggKeys) {
+    const a = agg[ak];
 
-    const hhPlanCut  = Number(hhPlanCutByTask[k]  || 0);
-    const real       = byTaskCut[k] || { hhReal: 0, qtyReal: 0, rendReal: null };
-    const hhRealCut  = Number(real.hhReal  || 0);
+    // % HH-ponderados (consistentes con la curva S global)
+    const pctPlan = a.hhPlanTotal > 0 ? Math.max(0, a.earnedHHPlan / a.hhPlanTotal) : null;
+    const pctReal = a.hhPlanTotal > 0 ? Math.max(0, a.earnedHHReal / a.hhPlanTotal) : null;
 
-    const qtyPlanTotal = Number(m.qtyPlan   || 0);
-    const qtyPlanCut   = Number(qtyPlanCutByTask[k] || 0);
-    const qtyRealCut   = Number(real.qtyReal || 0);
-
-    // DENOMINADOR: siempre qtyPlan (teórico LB)
-    // FIX 2: pctReal puede superar 1 si hay sobreejcución — sin cap
-    const pctPlan = (qtyPlanTotal > 0) ? Math.max(0, qtyPlanCut  / qtyPlanTotal) : null;
-    const pctReal = (qtyPlanTotal > 0) ? Math.max(0, qtyRealCut  / qtyPlanTotal) : null;
-    const diffPct = (pctPlan != null && pctReal != null) ? (pctReal - pctPlan) : null;
-
-    const diffHH  = hhRealCut - hhPlanCut;
-
-    // FIX 3: rendimiento real = HH acum / Qty acum al corte (totales, no semanal)
-    // rendReal ya viene calculado así desde construirCortePorTarea_ (ver abajo)
-    let rend = real.rendReal;
-    if (rend == null || !isFinite(rend) || rend <= 0) rend = m.rendPlan; // fallback al teórico
-
-    const qtyRem = Math.max(0, qtyPlanTotal - qtyRealCut);
-    const hhRest = (rend != null && isFinite(rend) && rend > 0) ? qtyRem * rend : null;
+    const rendPlan = a.qtyPlanTotal > 0 ? a.hhPlanTotal / a.qtyPlanTotal : null;
+    const rendReal = a.qtyRealCut   > 0 ? a.hhRealCut   / a.qtyRealCut   : null;
 
     rows.push([
-      m.actividad,
-      m.tarea,
-      qtyPlanTotal,             // Cant. Total
-      m.unidad || "",           // Unidad
-      qtyRealCut,               // Cant. Real (corte)
-      pctReal,                  // % Real (corte)
-      pctPlan,                  // % Plan (corte)
-      hhRealCut,                // HH Real (corte)
-      hhPlanCut,                // HH Plan (corte)
-      m.rendPlan,               // Rend Plan
-      real.rendReal,            // Rend Real
-      hhRest                    // HH Rest.
+      a.actividad,
+      a.tarea,
+      a.qtyPlanTotal,
+      a.unidad,
+      a.qtyRealCut,
+      pctReal,
+      pctPlan,
+      a.hhRealCut,
+      a.hhPlanCut,
+      rendPlan,
+      rendReal,
+      a.hhRest
     ]);
   }
   return rows;
@@ -667,22 +706,22 @@ function construirTaskMeta_(shPlan) {
   const iUni  = h.indexOf("Unidad");   // nueva: unidad de medida
 
   if (iEta === -1 || iAct === -1 || iTar === -1 || iQty === -1 || iHH === -1) {
-    throw new Error('En "Planificación Inicial" faltan: ACTIVIDAD, TAREA, Cantidad Teórica, HH TOTALES.');
+    throw new Error('En "Planificación Inicial" faltan: ETAPA, ACTIVIDAD, TAREA, Cantidad Teórica, HH TOTALES.');
   }
 
   const map = {};
-  // FIX 5: rastrear max(qty,hh) POR ETAPA para evitar doble-conteo de filas
-  // semanales (que repiten el mismo total), pero SUMAR entre etapas distintas
-  // (misma act+tar en Etapa 1 y Etapa 2 son cantidades independientes).
-  const etaMaxByKey = {}; // key -> { eta -> { qtyPlan, hhPlan } }
-
+  // Clave eta||act||tar: cada combinación (etapa, actividad, tarea) es
+  // su propia entrada con su cantidad y HH totales. Las filas semanales
+  // del plan repiten los mismos totales para esa combinación → MAX las
+  // consolida sin doble-conteo. Stages distintas con misma act+tar son
+  // entradas separadas (no se mezclan rendimientos entre etapas).
   for (let r = 1; r < v.length; r++) {
     const eta = normalizeKey_(v[r][iEta]);
     const act = normalizeKey_(v[r][iAct]);
     const tar = normalizeKey_(v[r][iTar]);
     if (!eta || !act || !tar) continue;
 
-    const key    = act + "||" + tar;
+    const key = eta + "||" + act + "||" + tar;
     const qtyPlan = toNumBack_(v[r][iQty]);
     let   hhPlan  = toNumBack_(v[r][iHH]);
 
@@ -693,14 +732,6 @@ function construirTaskMeta_(shPlan) {
 
     const unidad = (iUni !== -1) ? String(v[r][iUni] || "").trim() : "";
 
-    if (!etaMaxByKey[key]) etaMaxByKey[key] = {};
-    const prev   = etaMaxByKey[key][eta] || { qtyPlan: 0, hhPlan: 0 };
-    const newQty = Math.max(prev.qtyPlan, qtyPlan || 0);
-    const newHH  = Math.max(prev.hhPlan,  hhPlan  || 0);
-    const dQty   = newQty - prev.qtyPlan;
-    const dHH    = newHH  - prev.hhPlan;
-    etaMaxByKey[key][eta] = { qtyPlan: newQty, hhPlan: newHH };
-
     if (!map[key]) {
       map[key] = {
         etapa        : eta,
@@ -710,13 +741,13 @@ function construirTaskMeta_(shPlan) {
         tarea        : tar,
         tareaOrig    : String(v[r][iTar] || "").trim(),
         unidad,
-        qtyPlan      : newQty,
-        hhPlan       : newHH,
+        qtyPlan      : qtyPlan || 0,
+        hhPlan       : hhPlan  || 0,
         rendPlan     : null
       };
     } else {
-      map[key].qtyPlan = (map[key].qtyPlan || 0) + dQty;
-      map[key].hhPlan  = (map[key].hhPlan  || 0) + dHH;
+      if ((qtyPlan || 0) > map[key].qtyPlan) map[key].qtyPlan = qtyPlan || 0;
+      if ((hhPlan  || 0) > map[key].hhPlan)  map[key].hhPlan  = hhPlan  || 0;
       if (!map[key].unidad && unidad) map[key].unidad = unidad;
     }
     map[key].rendPlan = (map[key].qtyPlan > 0) ? (map[key].hhPlan / map[key].qtyPlan) : null;
@@ -1066,29 +1097,30 @@ function sumaPorSemanaActividad_(sheet, weekKeyColName, actColName, valorColName
   return sumaPorSemanaGrupo_(sheet, weekKeyColName, actColName, valorColName);
 }
 
-function cantidadPorSemanaPorTarea_(sheet, weekKeyColName, actColName, tareaColName, valorColName) {
+function cantidadPorSemanaPorTarea_(sheet, weekKeyColName, etaColName, actColName, tareaColName, valorColName) {
   const values  = sheet.getDataRange().getValues();
   const headers = values[0].map(String);
 
   const iWk  = headers.indexOf(weekKeyColName);
+  const iEta = headers.indexOf(etaColName);
   const iAct = headers.indexOf(actColName);
   const iTar = headers.indexOf(tareaColName);
   const iVal = headers.indexOf(valorColName);
 
-  if (iWk === -1 || iAct === -1 || iTar === -1 || iVal === -1) {
-    throw new Error(`En "${sheet.getName()}" faltan columnas para agrupar por tarea.`);
+  if (iWk === -1 || iEta === -1 || iAct === -1 || iTar === -1 || iVal === -1) {
+    throw new Error(`En "${sheet.getName()}" faltan columnas para agrupar por etapa+actividad+tarea.`);
   }
 
   const out = {};
   for (let r = 1; r < values.length; r++) {
     const wk  = String(values[r][iWk] || "").trim();
-    // FIX 4: normalizar act y tar al construir la clave
+    const eta = normalizeKey_(values[r][iEta]);
     const act = normalizeKey_(values[r][iAct]);
     const tar = normalizeKey_(values[r][iTar]);
     const v   = Number(values[r][iVal] || 0);
-    if (!wk || !act || !tar) continue;
+    if (!wk || !eta || !act || !tar) continue;
 
-    const key = act + "||" + tar;
+    const key = eta + "||" + act + "||" + tar;
     if (!out[wk]) out[wk] = {};
     out[wk][key] = (out[wk][key] || 0) + v;
   }
@@ -1100,12 +1132,13 @@ function sumaHastaCortePorTarea_(sheet, cutMonday, valorColName) {
   const h = v[0].map(String);
 
   const iWk  = h.indexOf("SEMANAS.WEEK_KEY");
+  const iEta = h.indexOf("ETAPA");
   const iAct = h.indexOf("ACTIVIDAD");
   const iTar = h.indexOf("TAREA");
   const iVal = h.indexOf(valorColName);
 
-  if (iWk === -1 || iAct === -1 || iTar === -1 || iVal === -1) {
-    throw new Error(`En "${sheet.getName()}" faltan columnas: SEMANAS.WEEK_KEY, ACTIVIDAD, TAREA, ${valorColName}.`);
+  if (iWk === -1 || iEta === -1 || iAct === -1 || iTar === -1 || iVal === -1) {
+    throw new Error(`En "${sheet.getName()}" faltan columnas: SEMANAS.WEEK_KEY, ETAPA, ACTIVIDAD, TAREA, ${valorColName}.`);
   }
 
   const map = {};
@@ -1114,12 +1147,12 @@ function sumaHastaCortePorTarea_(sheet, cutMonday, valorColName) {
     if (!wk) continue;
     if (weekKeyToDate_(wk) > cutMonday) continue;
 
-    // FIX 4: normalizar act y tar al construir la clave
+    const eta = normalizeKey_(v[r][iEta]);
     const act = normalizeKey_(v[r][iAct]);
     const tar = normalizeKey_(v[r][iTar]);
-    if (!act || !tar) continue;
+    if (!eta || !act || !tar) continue;
 
-    const key = act + "||" + tar;
+    const key = eta + "||" + act + "||" + tar;
     map[key] = (map[key] || 0) + Number(v[r][iVal] || 0);
   }
   return map;
