@@ -669,8 +669,12 @@ function construirTaskMeta_(shPlan) {
   }
 
   const map = {};
+  // FIX 5: rastrear max(qty,hh) POR ETAPA para evitar doble-conteo de filas
+  // semanales (que repiten el mismo total), pero SUMAR entre etapas distintas
+  // (misma act+tar en Etapa 1 y Etapa 2 son cantidades independientes).
+  const etaMaxByKey = {}; // key -> { eta -> { qtyPlan, hhPlan } }
+
   for (let r = 1; r < v.length; r++) {
-    // FIX 4: normalizar clave para evitar mismatches por espacios/tildes/mayúsculas
     const eta = normalizeKey_(v[r][iEta]);
     const act = normalizeKey_(v[r][iAct]);
     const tar = normalizeKey_(v[r][iTar]);
@@ -687,26 +691,33 @@ function construirTaskMeta_(shPlan) {
 
     const unidad = (iUni !== -1) ? String(v[r][iUni] || "").trim() : "";
 
+    if (!etaMaxByKey[key]) etaMaxByKey[key] = {};
+    const prev   = etaMaxByKey[key][eta] || { qtyPlan: 0, hhPlan: 0 };
+    const newQty = Math.max(prev.qtyPlan, qtyPlan || 0);
+    const newHH  = Math.max(prev.hhPlan,  hhPlan  || 0);
+    const dQty   = newQty - prev.qtyPlan;
+    const dHH    = newHH  - prev.hhPlan;
+    etaMaxByKey[key][eta] = { qtyPlan: newQty, hhPlan: newHH };
+
     if (!map[key]) {
       map[key] = {
-        etapa       : eta,
-        etapaOrig   : String(v[r][iEta] || "").trim(),
-        actividad   : act,
+        etapa        : eta,
+        etapaOrig    : String(v[r][iEta] || "").trim(),
+        actividad    : act,
         actividadOrig: String(v[r][iAct] || "").trim(),
-        tarea       : tar,
-        tareaOrig   : String(v[r][iTar] || "").trim(),
+        tarea        : tar,
+        tareaOrig    : String(v[r][iTar] || "").trim(),
         unidad,
-        qtyPlan,
-        hhPlan,
-        rendPlan : (qtyPlan > 0) ? (hhPlan / qtyPlan) : null
+        qtyPlan      : newQty,
+        hhPlan       : newHH,
+        rendPlan     : null
       };
     } else {
-      if (!map[key].etapa && eta) { map[key].etapa = eta; map[key].etapaOrig = String(v[r][iEta] || "").trim(); }
-      map[key].qtyPlan = Math.max(map[key].qtyPlan || 0, qtyPlan || 0);
-      map[key].hhPlan  = Math.max(map[key].hhPlan  || 0, hhPlan  || 0);
-      map[key].rendPlan = (map[key].qtyPlan > 0) ? (map[key].hhPlan / map[key].qtyPlan) : null;
+      map[key].qtyPlan = (map[key].qtyPlan || 0) + dQty;
+      map[key].hhPlan  = (map[key].hhPlan  || 0) + dHH;
       if (!map[key].unidad && unidad) map[key].unidad = unidad;
     }
+    map[key].rendPlan = (map[key].qtyPlan > 0) ? (map[key].hhPlan / map[key].qtyPlan) : null;
   }
   return map;
 }
