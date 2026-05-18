@@ -137,7 +137,7 @@ function onOpen() {
 // ------------------------------------------------------------
 //  ENTRY POINT PRINCIPAL
 // ------------------------------------------------------------
-function getDashboardData() {
+function getDashboardData(cutMondayISO) {
   const ss = SpreadsheetApp.getActive();
 
   const shPlan = ss.getSheetByName(DEST_PLAN_SHEET_NAME);
@@ -148,10 +148,21 @@ function getDashboardData() {
     throw new Error('Faltan hojas. Deben existir: "Planificación Inicial", "AVANCE_HH_REAL (2)", "AVANCE_REAL_CANT (2)".');
   }
 
-  // Corte real = lunes de la semana pasada
-  const today        = new Date();
-  const cutMonday    = startOfWeekMonday_(addDays_(today, -7));
-  const cutWeekKey   = dateToWeekKey_(cutMonday);
+  // Corte: si el front lo manda (ISO YYYY-MM-DD), lo respetamos llevándolo
+  // al lunes de esa semana; si no, default = lunes de la semana pasada.
+  let cutMonday = null;
+  if (cutMondayISO) {
+    const m = String(cutMondayISO).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) {
+      const parsed = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+      if (!isNaN(parsed.getTime())) cutMonday = startOfWeekMonday_(parsed);
+    }
+  }
+  if (!cutMonday) {
+    const today = new Date();
+    cutMonday   = startOfWeekMonday_(addDays_(today, -7));
+  }
+  const cutWeekKey    = dateToWeekKey_(cutMonday);
   const prevCutMonday = addDays_(cutMonday, -7);
 
   // Meta tareas (denominadores teóricos del LB)
