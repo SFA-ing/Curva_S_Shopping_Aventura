@@ -204,7 +204,7 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
   const iTar      = h.indexOf("TAREA");
   const iQty      = h.indexOf("Cantidad Teórica");
   const iUni      = h.indexOf("Unidad");
-  const iRend     = h.indexOf("Rendimiento Teorico");
+  const iRend     = findColIdx_(h, "Rendimiento Teorico");
   const iHHTot    = h.indexOf("HH TOTALES");
 
   if ([iPersonal, iEtapa, iAct, iTar, iQty, iUni, iRend, iHHTot].some(x => x === -1)) {
@@ -290,7 +290,7 @@ function transformPlanificacionLB_(shPlanLB, weekMap) {
   const iTar      = h.indexOf("TAREA");
   const iQty      = h.indexOf("Cantidad Teórica");
   const iUni      = h.indexOf("Unidad");
-  const iRend     = h.indexOf("Rendimiento Teorico");
+  const iRend     = findColIdx_(h, "Rendimiento Teorico");
   const iHHTot    = h.indexOf("HH TOTALES");
 
   if ([iPersonal, iEtapa, iAct, iTar, iQty, iUni, iRend, iHHTot].some(x => x === -1)) {
@@ -601,6 +601,20 @@ function indexOfAny_(arr, candidates) {
   for (const c of candidates) {
     const idx = arr.indexOf(c);
     if (idx !== -1) return idx;
+  }
+  return -1;
+}
+
+// Busca una columna por nombre tolerando sufijos y variaciones de
+// mayúsculas/espacios. Ej: "Rendimiento Teorico hh/un" matchea
+// la búsqueda "Rendimiento Teorico".
+function findColIdx_(headers, name) {
+  let i = headers.indexOf(name);
+  if (i !== -1) return i;
+  const target = String(name).trim().toLowerCase();
+  for (let c = 0; c < headers.length; c++) {
+    const hh = String(headers[c] || "").trim().toLowerCase();
+    if (hh === target || hh.startsWith(target)) return c;
   }
   return -1;
 }
